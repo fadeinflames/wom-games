@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { LeaderConsole } from "@/components/leader-console";
+import { LeaderConsole } from "@/components/leader-console-v2";
 
 type Props = {
   params: Promise<{ packId: string }>;

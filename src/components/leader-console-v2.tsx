@@ -59,6 +59,9 @@ function formatTime(iso: string) {
 type ScenarioHint = { when?: string; gm?: string; chat?: string; team?: string };
 type ScenarioAction = { id?: string; cat?: string; label?: string; response?: string; gmHint?: string };
 type ScenarioEvent = { t?: number; type?: string; title?: string; body?: string };
+type GmBeat = { at?: number; tip?: string };
+type GmPressure = { at?: number; msg?: string; who?: string };
+type GmCheckpoint = { step?: string; triggers?: string[] };
 
 function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
@@ -432,7 +435,7 @@ function ActiveSessionPanel({
                     {[...actionEvents].reverse().map((e) => (
                       <div key={e.id} className="rounded-lg border border-white/10 bg-black/40 p-3">
                         <div className="flex items-center justify-between gap-2 text-xs text-zinc-500">
-                          <span>
+                          <span suppressHydrationWarning>
                             R{e.round} · {e.phase} · {formatTime(e.createdAt)}
                           </span>
                           {e.actionVariant && (
@@ -492,26 +495,73 @@ function ActiveSessionPanel({
             )}
 
             {Object.keys(gmScript).length > 0 && (
-              <div className="card space-y-2">
+              <div className="card space-y-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">GM Script</p>
-                <div className="space-y-2 text-xs">
-                  {Object.entries(gmScript).map(([k, v]) => (
-                    <div key={k} className="rounded border border-white/10 bg-black/30 p-2">
-                      <p className="uppercase tracking-widest text-zinc-500 mb-1">{k}</p>
-                      {Array.isArray(v) ? (
-                        <ul className="list-disc pl-4 text-zinc-300 space-y-0.5">
-                          {v.map((item, i) => (
-                            <li key={i}>{typeof item === "string" ? item : JSON.stringify(item)}</li>
-                          ))}
-                        </ul>
-                      ) : typeof v === "object" && v !== null ? (
-                        <pre className="whitespace-pre-wrap text-zinc-300">{JSON.stringify(v, null, 2)}</pre>
-                      ) : (
-                        <p className="text-zinc-300">{String(v)}</p>
-                      )}
+
+                {asArray<GmBeat>(gmScript.beats).length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-400">Beats (подсказки по раундам)</p>
+                    <div className="space-y-1 text-xs">
+                      {asArray<GmBeat>(gmScript.beats).map((b, i) => (
+                        <div key={i} className="rounded border border-white/10 bg-black/30 p-2">
+                          <p className="text-zinc-500 font-mono text-[10px]">R{b.at ?? "?"}</p>
+                          <p className="text-zinc-300 leading-snug">{b.tip}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+
+                {asArray<GmPressure>(gmScript.pressure).length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-amber-400">Pressure (давящие инжекты)</p>
+                    <div className="space-y-1 text-xs">
+                      {asArray<GmPressure>(gmScript.pressure).map((p, i) => (
+                        <div key={i} className="rounded border border-white/10 bg-black/30 p-2">
+                          <p className="text-zinc-500 font-mono text-[10px]">
+                            R{p.at ?? "?"}{p.who ? ` · ${p.who}` : ""}
+                          </p>
+                          <p className="text-zinc-300 leading-snug">{p.msg}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {asArray<GmCheckpoint>(gmScript.checkpoints).length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-400">Checkpoints (ключевые шаги)</p>
+                    <ol className="list-decimal pl-5 space-y-1 text-xs text-zinc-300">
+                      {asArray<GmCheckpoint>(gmScript.checkpoints).map((c, i) => (
+                        <li key={i}>
+                          <p className="leading-snug">{c.step}</p>
+                          {Array.isArray(c.triggers) && c.triggers.length > 0 && (
+                            <p className="text-[10px] font-mono text-zinc-500 mt-0.5">
+                              → {c.triggers.join(", ")}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+
+                {Object.entries(gmScript).filter(([k]) => !["beats", "pressure", "checkpoints"].includes(k)).map(([k, v]) => (
+                  <div key={k} className="rounded border border-white/10 bg-black/30 p-2 text-xs">
+                    <p className="uppercase tracking-widest text-zinc-500 mb-1 text-[10px]">{k}</p>
+                    {Array.isArray(v) ? (
+                      <ul className="list-disc pl-4 text-zinc-300 space-y-0.5">
+                        {v.map((item, i) => (
+                          <li key={i}>{typeof item === "string" ? item : JSON.stringify(item)}</li>
+                        ))}
+                      </ul>
+                    ) : typeof v === "object" && v !== null ? (
+                      <pre className="whitespace-pre-wrap text-zinc-300">{JSON.stringify(v, null, 2)}</pre>
+                    ) : (
+                      <p className="text-zinc-300">{String(v)}</p>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
 
