@@ -71,6 +71,43 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
+function Section({
+  title,
+  count,
+  tone = "zinc",
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  count?: number;
+  tone?: "zinc" | "amber" | "emerald" | "cyan";
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const toneClass = {
+    zinc: "text-zinc-500",
+    amber: "text-amber-400",
+    emerald: "text-emerald-400",
+    cyan: "text-cyan-400",
+  }[tone];
+  return (
+    <details className="card group space-y-2" open={defaultOpen}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+        <span className={`text-xs uppercase tracking-[0.2em] ${toneClass}`}>
+          {title}
+          {typeof count === "number" && (
+            <span className="ml-2 rounded border border-white/10 px-1.5 py-0 font-mono text-[10px] text-zinc-400">
+              {count}
+            </span>
+          )}
+        </span>
+        <span className="text-zinc-500 transition-transform group-open:rotate-90">▸</span>
+      </summary>
+      <div className="pt-2">{children}</div>
+    </details>
+  );
+}
+
 export function LeaderConsole({
   packId,
   scenarios,
@@ -396,16 +433,22 @@ function ActiveSessionPanel({
               </p>
 
               {Object.keys(context).length > 0 && (
-                <div className="mt-3 rounded border border-white/10 bg-black/30 p-3 text-xs text-zinc-400 space-y-1">
-                  {Object.entries(context).map(([k, v]) => (
-                    <div key={k} className="flex gap-2">
-                      <span className="shrink-0 uppercase tracking-widest text-zinc-500">{k}:</span>
-                      <span className="text-zinc-300">
-                        {Array.isArray(v) ? v.join(", ") : String(v)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                <details className="group mt-3 rounded border border-white/10 bg-black/30 p-3 text-xs text-zinc-400">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+                    <span className="uppercase tracking-widest text-zinc-500">Контекст сценария</span>
+                    <span className="text-zinc-500 transition-transform group-open:rotate-90">▸</span>
+                  </summary>
+                  <div className="mt-2 space-y-1">
+                    {Object.entries(context).map(([k, v]) => (
+                      <div key={k} className="flex gap-2">
+                        <span className="shrink-0 uppercase tracking-widest text-zinc-500">{k}:</span>
+                        <span className="text-zinc-300">
+                          {Array.isArray(v) ? v.join(", ") : String(v)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
               )}
             </div>
 
@@ -465,8 +508,7 @@ function ActiveSessionPanel({
             </div>
 
             {hints.length > 0 && (
-              <div className="card space-y-2">
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Подсказки</p>
+              <Section title="Подсказки" count={hints.length} defaultOpen>
                 <div className="space-y-2">
                   {hints.map((h, i) => (
                     <div key={i} className="rounded border border-white/10 bg-black/30 p-2 text-xs">
@@ -491,83 +533,85 @@ function ActiveSessionPanel({
                     </div>
                   ))}
                 </div>
-              </div>
+              </Section>
             )}
 
-            {Object.keys(gmScript).length > 0 && (
-              <div className="card space-y-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">GM Script</p>
-
-                {asArray<GmBeat>(gmScript.beats).length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-400">Beats (подсказки по раундам)</p>
-                    <div className="space-y-1 text-xs">
-                      {asArray<GmBeat>(gmScript.beats).map((b, i) => (
-                        <div key={i} className="rounded border border-white/10 bg-black/30 p-2">
-                          <p className="text-zinc-500 font-mono text-[10px]">R{b.at ?? "?"}</p>
-                          <p className="text-zinc-300 leading-snug">{b.tip}</p>
-                        </div>
-                      ))}
+            {asArray<GmBeat>(gmScript.beats).length > 0 && (
+              <Section
+                title="Beats · подсказки по раундам"
+                tone="emerald"
+                count={asArray<GmBeat>(gmScript.beats).length}
+                defaultOpen
+              >
+                <div className="space-y-1 text-xs">
+                  {asArray<GmBeat>(gmScript.beats).map((b, i) => (
+                    <div key={i} className="rounded border border-white/10 bg-black/30 p-2">
+                      <p className="text-zinc-500 font-mono text-[10px]">R{b.at ?? "?"}</p>
+                      <p className="text-zinc-300 leading-snug">{b.tip}</p>
                     </div>
-                  </div>
-                )}
-
-                {asArray<GmPressure>(gmScript.pressure).length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-amber-400">Pressure (давящие инжекты)</p>
-                    <div className="space-y-1 text-xs">
-                      {asArray<GmPressure>(gmScript.pressure).map((p, i) => (
-                        <div key={i} className="rounded border border-white/10 bg-black/30 p-2">
-                          <p className="text-zinc-500 font-mono text-[10px]">
-                            R{p.at ?? "?"}{p.who ? ` · ${p.who}` : ""}
-                          </p>
-                          <p className="text-zinc-300 leading-snug">{p.msg}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {asArray<GmCheckpoint>(gmScript.checkpoints).length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-400">Checkpoints (ключевые шаги)</p>
-                    <ol className="list-decimal pl-5 space-y-1 text-xs text-zinc-300">
-                      {asArray<GmCheckpoint>(gmScript.checkpoints).map((c, i) => (
-                        <li key={i}>
-                          <p className="leading-snug">{c.step}</p>
-                          {Array.isArray(c.triggers) && c.triggers.length > 0 && (
-                            <p className="text-[10px] font-mono text-zinc-500 mt-0.5">
-                              → {c.triggers.join(", ")}
-                            </p>
-                          )}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                {Object.entries(gmScript).filter(([k]) => !["beats", "pressure", "checkpoints"].includes(k)).map(([k, v]) => (
-                  <div key={k} className="rounded border border-white/10 bg-black/30 p-2 text-xs">
-                    <p className="uppercase tracking-widest text-zinc-500 mb-1 text-[10px]">{k}</p>
-                    {Array.isArray(v) ? (
-                      <ul className="list-disc pl-4 text-zinc-300 space-y-0.5">
-                        {v.map((item, i) => (
-                          <li key={i}>{typeof item === "string" ? item : JSON.stringify(item)}</li>
-                        ))}
-                      </ul>
-                    ) : typeof v === "object" && v !== null ? (
-                      <pre className="whitespace-pre-wrap text-zinc-300">{JSON.stringify(v, null, 2)}</pre>
-                    ) : (
-                      <p className="text-zinc-300">{String(v)}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </Section>
             )}
+
+            {asArray<GmPressure>(gmScript.pressure).length > 0 && (
+              <Section
+                title="Pressure · давящие инжекты"
+                tone="amber"
+                count={asArray<GmPressure>(gmScript.pressure).length}
+              >
+                <div className="space-y-1 text-xs">
+                  {asArray<GmPressure>(gmScript.pressure).map((p, i) => (
+                    <div key={i} className="rounded border border-white/10 bg-black/30 p-2">
+                      <p className="text-zinc-500 font-mono text-[10px]">
+                        R{p.at ?? "?"}{p.who ? ` · ${p.who}` : ""}
+                      </p>
+                      <p className="text-zinc-300 leading-snug">{p.msg}</p>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {asArray<GmCheckpoint>(gmScript.checkpoints).length > 0 && (
+              <Section
+                title="Checkpoints · ключевые шаги"
+                tone="cyan"
+                count={asArray<GmCheckpoint>(gmScript.checkpoints).length}
+              >
+                <ol className="list-decimal pl-5 space-y-1 text-xs text-zinc-300">
+                  {asArray<GmCheckpoint>(gmScript.checkpoints).map((c, i) => (
+                    <li key={i}>
+                      <p className="leading-snug">{c.step}</p>
+                      {Array.isArray(c.triggers) && c.triggers.length > 0 && (
+                        <p className="text-[10px] font-mono text-zinc-500 mt-0.5">
+                          → {c.triggers.join(", ")}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </Section>
+            )}
+
+            {Object.entries(gmScript).filter(([k]) => !["beats", "pressure", "checkpoints"].includes(k)).map(([k, v]) => (
+              <Section key={k} title={k}>
+                {Array.isArray(v) ? (
+                  <ul className="list-disc pl-4 text-zinc-300 space-y-0.5 text-xs">
+                    {v.map((item, i) => (
+                      <li key={i}>{typeof item === "string" ? item : JSON.stringify(item)}</li>
+                    ))}
+                  </ul>
+                ) : typeof v === "object" && v !== null ? (
+                  <pre className="whitespace-pre-wrap text-zinc-300 text-xs">{JSON.stringify(v, null, 2)}</pre>
+                ) : (
+                  <p className="text-zinc-300 text-xs">{String(v)}</p>
+                )}
+              </Section>
+            ))}
 
             {scenarioEvents.length > 0 && (
-              <div className="card space-y-2">
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Таймлайн инцидента</p>
+              <Section title="Таймлайн инцидента" count={scenarioEvents.length}>
                 <div className="space-y-1 text-xs">
                   {scenarioEvents.map((e, i) => (
                     <div key={i} className="rounded border border-white/10 bg-black/30 p-2">
@@ -579,12 +623,11 @@ function ActiveSessionPanel({
                     </div>
                   ))}
                 </div>
-              </div>
+              </Section>
             )}
 
             {scenarioActions.length > 0 && (
-              <div className="card space-y-2">
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Правильные действия</p>
+              <Section title="Правильные действия" count={scenarioActions.length}>
                 <div className="space-y-1 text-xs">
                   {scenarioActions.map((a, i) => (
                     <div key={i} className="rounded border border-white/10 bg-black/30 p-2">
@@ -601,7 +644,7 @@ function ActiveSessionPanel({
                     </div>
                   ))}
                 </div>
-              </div>
+              </Section>
             )}
 
             <div className="card">
