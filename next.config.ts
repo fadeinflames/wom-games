@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  allowedDevOrigins: ["game.sresh.ru", "wom.sresh.ru"],
+  turbopack: {
+    root: process.cwd(),
+  },
 };
 
 export default nextConfig;

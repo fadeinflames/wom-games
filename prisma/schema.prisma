@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Difficulty {
+  JUNIOR
+  MIDDLE
+  SENIOR
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  username      String        @unique
+  passwordHash  String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  sessions      Session[]
+  packs         GamePack[]
+  gameSessions  GameSession[] @relation("UserGameSessions")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model GamePack {
+  id            String        @id @default(cuid())
+  title         String
+  description   String
+  isPublic      Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  ownerId       String
+  owner         User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  scenarios     Scenario[]
+  gameSessions  GameSession[]
+}
+
+model Scenario {
+  id            String        @id @default(cuid())
+  title         String
+  summary       String
+  type          String
+  difficulty    Difficulty    @default(MIDDLE)
+  durationMin   Int           @default(20)
+  contextJson   Json
+  eventsJson    Json
+  hintsJson     Json
+  actionsJson   Json
+  gmScriptJson  Json?
+  position      Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  packId        String
+  pack          GamePack      @relation(fields: [packId], references: [id], onDelete: Cascade)
+  gameSessions  GameSession[]
+
+  @@index([packId, position])
+}
+
+model GameSession {
+  id         String             @id @default(cuid())
+  code       String             @unique
+  packId     String
+  pack       GamePack           @relation(fields: [packId], references: [id], onDelete: Cascade)
+  scenarioId String?
+  scenario   Scenario?          @relation(fields: [scenarioId], references: [id], onDelete: SetNull)
+  gmUserId   String
+  gm         User               @relation("UserGameSessions", fields: [gmUserId], references: [id], onDelete: Cascade)
+  status     String             @default("waiting")
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  events     GameSessionEvent[]
+
+  @@index([gmUserId, status])
+}
+
+model GameSessionEvent {
+  id            String      @id @default(cuid())
+  sessionId     String
+  session       GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  kind          String
+  round         Int         @default(0)
+  phase         String?
+  actionKey     String?
+  actionTitle   String?
+  actionVariant String?
+  actionResult  String?
+  score         Int         @default(0)
+  panic         Int         @default(0)
+  createdAt     DateTime    @default(now())
+
+  @@index([sessionId, createdAt])
+}

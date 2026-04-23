@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: wom_db
+    environment:
+      POSTGRES_DB: wom
+      POSTGRES_USER: wom
+      POSTGRES_PASSWORD: wom
+    ports:
+      - "5432:5432"
+    volumes:
+      - wom_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wom -d wom"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    container_name: wom_app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://wom:wom@db:5432/wom?schema=public
+      SESSION_SECRET: change-me-for-real
+    ports:
+      - "3000:3000"
+    command: >
+      sh -c "npm run prisma:generate &&
+             npm run db:deploy ||
+             npm run db:migrate;
+             npm run db:seed;
+             npm run dev -- --hostname 0.0.0.0 --port 3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+volumes:
+  wom_db_data:
