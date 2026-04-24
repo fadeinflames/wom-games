@@ -40,7 +40,6 @@ export function DeletePackButton({
   packId: string;
   title: string;
 }) {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   async function handleDelete() {

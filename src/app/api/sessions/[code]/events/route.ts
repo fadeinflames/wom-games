@@ -19,16 +19,30 @@ export async function POST(req: Request, ctx: Ctx) {
 
   const session = await prisma.gameSession.findUnique({
     where: { code },
-    select: { id: true, status: true },
+    select: { id: true, status: true, scenarioId: true },
   });
   if (!session) return notFound("Session not found");
   if (session.status === "ended") {
     return badRequest("Session has ended");
   }
+  if (session.status !== "active" || !session.scenarioId) {
+    return badRequest("Session is not active yet");
+  }
 
-  const event = await prisma.gameSessionEvent.create({
-    data: { sessionId: session.id, ...parsed.data },
-    select: { id: true, createdAt: true },
+  const event = await prisma.$transaction(async (tx) => {
+    const created = await tx.gameSessionEvent.create({
+      data: { sessionId: session.id, ...parsed.data },
+      select: { id: true, createdAt: true },
+    });
+
+    if (parsed.data.kind === "end") {
+      await tx.gameSession.update({
+        where: { id: session.id },
+        data: { status: "ended" },
+      });
+    }
+
+    return created;
   });
 
   return NextResponse.json({ ok: true, id: event.id, at: event.createdAt });

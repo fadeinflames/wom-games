@@ -25,6 +25,8 @@ export default async function PlayPackPage({ params }: Props) {
           difficulty: true,
           durationMin: true,
           type: true,
+          contextJson: true,
+          eventsJson: true,
         },
       },
     },

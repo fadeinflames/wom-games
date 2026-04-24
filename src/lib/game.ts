@@ -18,6 +18,8 @@ export type ScenarioLite = {
   difficulty: Difficulty;
   durationMin: number;
   type: string;
+  contextJson?: unknown;
+  eventsJson?: unknown;
 };
 
 export function difficultyColor(diff: Difficulty) {
@@ -504,4 +506,3 @@ export function buildRoundActions(scenario: ScenarioLite, round: number): GameAc
     : GENERIC_PHASE_ACTIONS[phase];
   return actions.map((a) => ({ ...a }));
 }
-

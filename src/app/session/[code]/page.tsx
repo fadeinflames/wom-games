@@ -34,6 +34,8 @@ export default async function SessionPage({ params }: Props) {
               difficulty: true,
               durationMin: true,
               type: true,
+              contextJson: true,
+              eventsJson: true,
             },
           },
         },
@@ -75,6 +77,7 @@ export default async function SessionPage({ params }: Props) {
 
       <SessionPlayer
         code={session.code}
+        initialStatus={session.status}
         initialScenarioId={session.scenarioId}
         scenarios={session.pack.scenarios}
       />

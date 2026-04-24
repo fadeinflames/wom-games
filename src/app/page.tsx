@@ -121,53 +121,54 @@ export default async function HomePage() {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          {/* Agent skill */}
-          <div className="card space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-mono text-emerald-400 mb-1">agent-skill/wom-incident-to-json/SKILL.md</p>
-                <h2 className="font-[var(--font-display)] text-xl font-bold">Agent skill для Claude</h2>
+          <div className="space-y-4">
+            {/* Agent skill */}
+            <div className="card space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-mono text-emerald-400 mb-1">agent-skill/wom-incident-to-json/SKILL.md</p>
+                  <h2 className="font-[var(--font-display)] text-xl font-bold">Agent skill для Claude</h2>
+                </div>
+                <span className="rounded border border-emerald-500/30 px-2 py-0.5 text-xs text-emerald-400 font-mono shrink-0">AI</span>
               </div>
-              <span className="rounded border border-emerald-500/30 px-2 py-0.5 text-xs text-emerald-400 font-mono shrink-0">AI</span>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                В репозитории есть готовый агентный скилл для Claude Code.
+                Он конвертирует описание любого реального инцидента, runbook или заметки
+                в валидный JSON для импорта — автоматически заполняет все поля по контексту.
+              </p>
+              <div className="space-y-2">
+                <p className="text-xs text-zinc-500 uppercase tracking-widest">Как использовать</p>
+                <ol className="space-y-1.5 text-sm text-zinc-400">
+                  <li className="flex gap-2">
+                    <span className="text-amber-500 shrink-0">1.</span>
+                    <span>Установи <a href="https://claude.ai/code" target="_blank" rel="noopener" className="text-amber-400 hover:underline">Claude Code</a> в своём репозитории</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-amber-500 shrink-0">2.</span>
+                    <span>Скопируй <code className="rounded bg-white/10 px-1 text-xs font-mono">agent-skill/wom-incident-to-json/SKILL.md</code> в свой проект</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-amber-500 shrink-0">3.</span>
+                    <span>Скажи агенту: <em className="text-zinc-300">«Сделай JSON для импорта в WOM»</em> и опиши инцидент</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-amber-500 shrink-0">4.</span>
+                    <span>Вставь результат в форму импорта на странице pack</span>
+                  </li>
+                </ol>
+              </div>
             </div>
-            <p className="text-sm text-zinc-400 leading-relaxed">
-              В репозитории есть готовый агентный скилл для Claude Code.
-              Он конвертирует описание любого реального инцидента, runbook или заметки
-              в валидный JSON для импорта — автоматически заполняет все поля по контексту.
-            </p>
-            <div className="space-y-2">
-              <p className="text-xs text-zinc-500 uppercase tracking-widest">Как использовать</p>
-              <ol className="space-y-1.5 text-sm text-zinc-400">
-                <li className="flex gap-2">
-                  <span className="text-amber-500 shrink-0">1.</span>
-                  <span>Установи <a href="https://claude.ai/code" target="_blank" rel="noopener" className="text-amber-400 hover:underline">Claude Code</a> в своём репозитории</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-amber-500 shrink-0">2.</span>
-                  <span>Скопируй <code className="rounded bg-white/10 px-1 text-xs font-mono">agent-skill/wom-incident-to-json/SKILL.md</code> в свой проект</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-amber-500 shrink-0">3.</span>
-                  <span>Скажи агенту: <em className="text-zinc-300">«Сделай JSON для импорта в WOM»</em> и опиши инцидент</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-amber-500 shrink-0">4.</span>
-                  <span>Вставь результат в форму импорта на странице pack</span>
-                </li>
-              </ol>
-            </div>
-          </div>
 
-          {/* Agent skill spoiler */}
-          <details className="col-span-full rounded-lg border border-emerald-500/20 bg-emerald-500/5 group">
-            <summary className="flex cursor-pointer items-center justify-between gap-3 p-4 text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors">
-              <span className="flex items-center gap-2">
-                <span className="font-mono text-xs">📄</span>
-                Полный текст SKILL.md — скопируй в свой репозиторий
-              </span>
-              <span className="text-zinc-500 group-open:rotate-180 transition-transform text-xs">▾</span>
-            </summary>
-            <pre className="overflow-x-auto border-t border-emerald-500/20 p-4 text-xs text-zinc-300 font-mono leading-relaxed whitespace-pre-wrap">{`# WOM Incident To JSON
+            {/* Agent skill spoiler */}
+            <details className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 group">
+              <summary className="flex cursor-pointer items-center justify-between gap-3 p-4 text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors">
+                <span className="flex items-center gap-2">
+                  <span className="font-mono text-xs">📄</span>
+                  Полный текст SKILL.md — скопируй в свой репозиторий
+                </span>
+                <span className="text-zinc-500 group-open:rotate-180 transition-transform text-xs">▾</span>
+              </summary>
+              <pre className="overflow-x-auto border-t border-emerald-500/20 p-4 text-xs text-zinc-300 font-mono leading-relaxed whitespace-pre-wrap">{`# WOM Incident To JSON
 
 Convert incident descriptions, markdown runbooks, and rough notes into import-ready JSON for WOM Platform.
 
@@ -220,7 +221,8 @@ When the user says: "Сделай JSON для импорта в WOM", produce:
   ]
 }
 \`\`\``}</pre>
-          </details>
+            </details>
+          </div>
 
           {/* JSON import format */}
           <div className="card space-y-4">

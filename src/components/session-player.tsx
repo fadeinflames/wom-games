@@ -6,32 +6,44 @@ import type { ScenarioLite } from "@/lib/game";
 
 type Props = {
   code: string;
+  initialStatus: string;
   initialScenarioId: string | null;
   scenarios: ScenarioLite[];
 };
 
-export function SessionPlayer({ code, initialScenarioId, scenarios }: Props) {
+export function SessionPlayer({ code, initialStatus, initialScenarioId, scenarios }: Props) {
+  const [status, setStatus] = useState(initialStatus);
   const [scenarioId, setScenarioId] = useState<string | null>(initialScenarioId);
   const [picking, setPicking] = useState(false);
   const [pickError, setPickError] = useState<string | null>(null);
 
-  // Poll for scenarioId only while we're waiting for GM to pick
+  // Keep the player synchronized with the GM while the session is open.
   useEffect(() => {
-    if (scenarioId) return;
-    const timer = setInterval(async () => {
+    if (status === "ended") return;
+    const pollSession = async () => {
       try {
         const res = await fetch(`/api/sessions/${code}`, { cache: "no-store" });
         if (!res.ok) return;
-        const data = (await res.json()) as { session: { scenarioId: string | null } };
-        if (data.session.scenarioId) {
+        const data = (await res.json()) as {
+          session: { scenarioId: string | null; status: string };
+        };
+        setStatus(data.session.status);
+        if (!scenarioId && data.session.scenarioId) {
           setScenarioId(data.session.scenarioId);
         }
       } catch {
         // ignore
       }
+    };
+    const initialPoll = setTimeout(pollSession, 0);
+    const timer = setInterval(async () => {
+      await pollSession();
     }, 2500);
-    return () => clearInterval(timer);
-  }, [code, scenarioId]);
+    return () => {
+      clearTimeout(initialPoll);
+      clearInterval(timer);
+    };
+  }, [code, scenarioId, status]);
 
   const sendEvent = useCallback(
     async (event: PlayerEvent) => {
@@ -83,11 +95,22 @@ export function SessionPlayer({ code, initialScenarioId, scenarios }: Props) {
         return;
       }
       setScenarioId(data.scenarioId ?? id);
+      setStatus("active");
     } catch {
       setPickError("Ошибка соединения");
     } finally {
       setPicking(false);
     }
+  }
+
+  if (status === "ended") {
+    return (
+      <div className="card space-y-3 text-center">
+        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Сессия</p>
+        <h2 className="font-[var(--font-display)] text-2xl font-bold">Игра завершена</h2>
+        <p className="text-sm text-zinc-400">Ведущий закрыл эту сессию.</p>
+      </div>
+    );
   }
 
   if (!scenarioId) {
@@ -117,6 +140,7 @@ export function SessionPlayer({ code, initialScenarioId, scenarios }: Props) {
 
   return (
     <PlayerBoard
+      key={scenarioId}
       scenarios={scenarios}
       lockedScenarioId={scenarioId}
       showScenarioPicker={false}

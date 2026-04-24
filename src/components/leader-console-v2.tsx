@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { difficultyColor, getIncidentPhase } from "@/lib/game";
 import type { Difficulty } from "@prisma/client";
 
@@ -278,7 +278,6 @@ function ActiveSessionPanel({
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchSession = useCallback(async () => {
     try {
@@ -296,10 +295,11 @@ function ActiveSessionPanel({
   }, [code]);
 
   useEffect(() => {
-    fetchSession();
-    pollRef.current = setInterval(fetchSession, 2000);
+    const initialLoad = setTimeout(fetchSession, 0);
+    const poll = setInterval(fetchSession, 2000);
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
+      clearTimeout(initialLoad);
+      clearInterval(poll);
     };
   }, [fetchSession]);
 
@@ -328,8 +328,12 @@ function ActiveSessionPanel({
   const events = session?.events ?? [];
   const actionEvents = events.filter((e) => e.kind === "action");
   const lastAction = actionEvents.at(-1) ?? null;
-  const currentRoundEvent = events.filter((e) => e.kind === "round").at(-1);
-  const currentRound = lastAction?.round ?? currentRoundEvent?.round ?? 1;
+  const currentRound = Math.max(
+    1,
+    ...events
+      .filter((e) => e.kind === "start" || e.kind === "round" || e.kind === "action" || e.kind === "end")
+      .map((e) => e.round),
+  );
   const phaseInfo = getIncidentPhase(currentRound);
   const totalScore = lastAction?.score ?? 0;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   buildRoundActions,
   getIncidentPhase,
@@ -13,6 +13,19 @@ import {
 const MAX_ROUNDS = 10;
 
 type GamePhase = "playing" | "done";
+
+type ScenarioContext = Record<string, unknown>;
+type ScenarioTimelineEvent = { t?: number; type?: string; title?: string; body?: string };
+
+function asRecord(value: unknown): ScenarioContext {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as ScenarioContext)
+    : {};
+}
+
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
 
 export type PlayerEvent =
   | { kind: "start"; round: 1; phase: string }
@@ -54,19 +67,19 @@ export function PlayerBoard({
     return idx >= 0 ? idx : null;
   });
 
-  useEffect(() => {
-    if (!lockedScenarioId) return;
-    const idx = scenarios.findIndex((s) => s.id === lockedScenarioId);
-    if (idx >= 0 && idx !== scenarioIdx) setScenarioIdx(idx);
-  }, [lockedScenarioId, scenarios, scenarioIdx]);
-
-  const scenario = scenarioIdx !== null ? (scenarios[scenarioIdx] ?? null) : null;
+  const lockedScenario = lockedScenarioId
+    ? scenarios.find((item) => item.id === lockedScenarioId) ?? null
+    : null;
+  const pickedScenario = scenarioIdx !== null ? (scenarios[scenarioIdx] ?? null) : null;
+  const scenario = lockedScenarioId ? lockedScenario : pickedScenario;
+  const scenarioUnavailable = Boolean(lockedScenarioId && !lockedScenario);
+  const context = scenario ? asRecord(scenario.contextJson) : {};
+  const scenarioEvents = scenario ? asArray<ScenarioTimelineEvent>(scenario.eventsJson) : [];
 
   const incidentPhase = getIncidentPhase(round);
 
   const choices = useMemo(
     () => (scenario ? buildRoundActions(scenario, round) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [scenario, round],
   );
 
@@ -131,11 +144,17 @@ export function PlayerBoard({
     }
   }
 
-  if (scenarioIdx === null && !showScenarioPicker) {
+  if (!scenario && !showScenarioPicker) {
     return (
       <div className="rounded-xl border border-white/10 bg-black/55 p-8 text-center space-y-3">
-        <p className="text-xs uppercase tracking-[0.2em] text-amber-400">Ждём ведущего</p>
-        <p className="text-zinc-300">Ведущий ещё не выбрал сценарий. Страница обновится автоматически.</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-amber-400">
+          {scenarioUnavailable ? "Сценарий недоступен" : "Ждём ведущего"}
+        </p>
+        <p className="text-zinc-300">
+          {scenarioUnavailable
+            ? "Выбранный сценарий больше не найден в pack. Попроси ведущего создать новую сессию."
+            : "Ведущий ещё не выбрал сценарий. Страница обновится автоматически."}
+        </p>
       </div>
     );
   }
@@ -154,6 +173,7 @@ export function PlayerBoard({
             {scenarios.map((s, i) => (
               <button
                 key={s.id}
+                type="button"
                 onClick={() => setScenarioIdx(i)}
                 className="rounded-xl border border-white/15 bg-zinc-950/75 p-4 text-left transition hover:border-amber-400/60 hover:bg-zinc-900/80 cursor-pointer group"
               >
@@ -209,7 +229,7 @@ export function PlayerBoard({
             ))}
           </div>
         )}
-        <button onClick={resetGame} className="btn btn-primary mx-auto">
+        <button type="button" onClick={resetGame} className="btn btn-primary mx-auto">
           Новый инцидент
         </button>
       </div>
@@ -233,8 +253,9 @@ export function PlayerBoard({
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-zinc-400">Score: {score}</span>
-          <button className="btn" onClick={resetGame}>↺ Reset</button>
+          <button type="button" className="btn" onClick={resetGame}>↺ Reset</button>
           <button
+            type="button"
             className="btn btn-primary"
             onClick={nextRound}
             disabled={!locked}
@@ -260,6 +281,18 @@ export function PlayerBoard({
                 <p className="text-sm text-zinc-500">
                   {scenario.type} · {scenario.durationMin} мин · {scenario.difficulty}
                 </p>
+                {Object.keys(context).length > 0 && (
+                  <div className="mt-4 grid gap-2 text-xs text-zinc-400 sm:grid-cols-2">
+                    {Object.entries(context).slice(0, 6).map(([key, value]) => (
+                      <div key={key} className="rounded-lg border border-white/10 bg-black/30 p-2">
+                        <p className="uppercase tracking-widest text-zinc-600">{key}</p>
+                        <p className="mt-1 text-zinc-300">
+                          {Array.isArray(value) ? value.join(", ") : String(value)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <p className="mt-3 text-zinc-400">Нет сценариев в этом pack.</p>
@@ -284,6 +317,7 @@ export function PlayerBoard({
                 {choices.map((choice) => (
                   <button
                     key={choice.key}
+                    type="button"
                     className={`rounded-xl border bg-zinc-950/75 p-4 text-left transition border-white/15 ${
                       selectedAction === choice.key
                         ? "ring-1 ring-amber-400 border-amber-400/50"
@@ -362,12 +396,21 @@ export function PlayerBoard({
           <div className="rounded-xl border border-white/10 bg-zinc-950/80 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Timeline</p>
             <div className="mt-3 space-y-2">
+              {scenarioEvents.slice(0, 4).map((event, i) => (
+                <div key={`scenario-${i}`} className="rounded border border-amber-500/15 bg-amber-500/5 p-2 text-xs">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-amber-400">
+                    T+{event.t ?? "?"}м {event.type ? `· ${event.type}` : ""}
+                  </p>
+                  {event.title && <p className="mt-1 font-semibold text-zinc-200">{event.title}</p>}
+                  {event.body && <p className="mt-0.5 text-zinc-400">{event.body}</p>}
+                </div>
+              ))}
               {history.map((item, i) => (
                 <div key={i} className="rounded border border-white/10 bg-black/30 p-2 text-xs text-zinc-300">
                   {item}
                 </div>
               ))}
-              {!history.length ? (
+              {!history.length && !scenarioEvents.length ? (
                 <p className="text-sm text-zinc-500">История действий появится здесь.</p>
               ) : null}
             </div>

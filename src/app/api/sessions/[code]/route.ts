@@ -10,16 +10,20 @@ type Ctx = { params: Promise<{ code: string }> };
 export async function GET(_req: Request, ctx: Ctx) {
   const { code } = await ctx.params;
   if (!isValidSessionCode(code)) return notFound("Session not found");
+  const user = await getCurrentUser();
 
   const session = await prisma.gameSession.findUnique({
     where: { code },
-    include: {
+    select: {
+      id: true,
+      code: true,
+      status: true,
+      scenarioId: true,
+      gmUserId: true,
       pack: {
         select: {
           id: true,
           title: true,
-          ownerId: true,
-          isPublic: true,
           scenarios: {
             orderBy: { position: "asc" },
             select: {
@@ -29,11 +33,27 @@ export async function GET(_req: Request, ctx: Ctx) {
               difficulty: true,
               durationMin: true,
               type: true,
+              contextJson: true,
+              eventsJson: true,
             },
           },
         },
       },
-      scenario: true,
+      scenario: {
+        select: {
+          id: true,
+          title: true,
+          summary: true,
+          difficulty: true,
+          durationMin: true,
+          type: true,
+          contextJson: true,
+          eventsJson: true,
+          hintsJson: true,
+          gmScriptJson: true,
+          actionsJson: true,
+        },
+      },
       gm: { select: { id: true, username: true } },
       events: {
         orderBy: { createdAt: "asc" },
@@ -42,6 +62,32 @@ export async function GET(_req: Request, ctx: Ctx) {
     },
   });
   if (!session) return notFound("Session not found");
+
+  const isGm = user?.id === session.gmUserId;
+  if (!isGm) {
+    return NextResponse.json({
+      session: {
+        id: session.id,
+        code: session.code,
+        status: session.status,
+        scenarioId: session.scenarioId,
+        pack: session.pack,
+        gm: { username: session.gm.username },
+        scenario: session.scenario
+          ? {
+              id: session.scenario.id,
+              title: session.scenario.title,
+              summary: session.scenario.summary,
+              difficulty: session.scenario.difficulty,
+              durationMin: session.scenario.durationMin,
+              type: session.scenario.type,
+              contextJson: session.scenario.contextJson,
+              eventsJson: session.scenario.eventsJson,
+            }
+          : null,
+      },
+    });
+  }
 
   return NextResponse.json({ session });
 }
