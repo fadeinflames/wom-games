@@ -20,7 +20,46 @@ export type ScenarioLite = {
   type: string;
   contextJson?: unknown;
   eventsJson?: unknown;
+  actionsJson?: unknown;
 };
+
+type PlayerScenarioAction = {
+  id?: string;
+  cat?: string;
+  label?: string;
+  response?: string;
+  priority?: number;
+};
+
+function asActionRecords(value: unknown): PlayerScenarioAction[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => (
+      Boolean(item) && typeof item === "object" && !Array.isArray(item)
+    ))
+    .map((item) => ({
+      id: typeof item.id === "string" ? item.id : undefined,
+      cat: typeof item.cat === "string" ? item.cat : undefined,
+      label: typeof item.label === "string" ? item.label : undefined,
+      response: typeof item.response === "string" ? item.response : undefined,
+      priority: typeof item.priority === "number" ? item.priority : undefined,
+    }))
+    .filter((item) => item.label && item.response);
+}
+
+export function sanitizeScenarioForPlayer<T extends ScenarioLite>(scenario: T): ScenarioLite {
+  return {
+    id: scenario.id,
+    title: scenario.title,
+    summary: scenario.summary,
+    difficulty: scenario.difficulty,
+    durationMin: scenario.durationMin,
+    type: scenario.type,
+    contextJson: scenario.contextJson,
+    eventsJson: scenario.eventsJson,
+    actionsJson: asActionRecords(scenario.actionsJson),
+  };
+}
 
 export function difficultyColor(diff: Difficulty) {
   if (diff === "JUNIOR") return "text-emerald-400 border-emerald-500/40";
@@ -498,8 +537,68 @@ const GENERIC_PHASE_ACTIONS: Record<PhaseLabel, GameAction[]> = {
   ],
 };
 
+function actionVariantFromCategory(category?: string): ActionVariant {
+  const cat = category?.toLowerCase() ?? "";
+  if (["logs", "exec", "check", "observe", "inspect"].includes(cat)) return "DBG";
+  if (["communicate", "status", "notify", "com"].includes(cat)) return "COM";
+  if (["fix", "patch", "rollback", "scale", "restart"].includes(cat)) return "OPS";
+  if (["danger", "decision", "incident"].includes(cat)) return "IC";
+  return "DBG";
+}
+
+function actionImpactFromCategory(category?: string, priority?: number) {
+  const cat = category?.toLowerCase() ?? "";
+  const base =
+    cat === "fix" || cat === "rollback" || cat === "patch" ? 17 :
+    cat === "danger" ? 4 :
+    cat === "logs" || cat === "exec" || cat === "check" ? 12 :
+    10;
+  return priority === 1 ? base + 2 : base;
+}
+
+function buildScenarioJsonActions(scenario: ScenarioLite, phase: PhaseLabel): GameAction[] {
+  const source = asActionRecords(scenario.actionsJson);
+  if (!source.length) return [];
+
+  const sorted = source
+    .map((action, index) => ({ action, index }))
+    .sort((a, b) => (a.action.priority ?? 99) - (b.action.priority ?? 99) || a.index - b.index);
+
+  const phaseCategories: Record<PhaseLabel, string[]> = {
+    DETECTION: ["check", "logs", "exec", "observe", "inspect"],
+    INVESTIGATION: ["check", "logs", "exec", "observe", "inspect"],
+    MITIGATION: ["fix", "patch", "rollback", "restart", "scale", "danger"],
+    RECOVERY: ["fix", "patch", "rollback", "restart", "scale", "communicate", "status", "notify"],
+  };
+  const allowed = phaseCategories[phase];
+  const phaseMatches = sorted.filter(({ action }) => (
+    allowed.includes(action.cat?.toLowerCase() ?? "")
+  ));
+  const picked = [
+    ...phaseMatches,
+    ...sorted.filter(({ action }) => !phaseMatches.some((match) => match.action === action)),
+  ].slice(0, 4);
+
+  return picked.map(({ action, index }) => {
+    const category = action.cat?.toUpperCase() ?? "ACTION";
+    return {
+      key: action.id ?? `${category.toLowerCase()}-${index}`,
+      title: action.label ?? "Действие",
+      body: category,
+      result: action.response ?? "Результат действия зафиксирован.",
+      variant: actionVariantFromCategory(action.cat),
+      impact: actionImpactFromCategory(action.cat, action.priority),
+    };
+  });
+}
+
 export function buildRoundActions(scenario: ScenarioLite, round: number): GameAction[] {
   const phase = getIncidentPhase(round).label as PhaseLabel;
+  const scenarioJsonActions = buildScenarioJsonActions(scenario, phase);
+  if (scenarioJsonActions.length > 0) {
+    return scenarioJsonActions;
+  }
+
   const key = detectScenarioKey(scenario.type);
   const actions = key
     ? SCENARIO_ACTIONS[key][phase]

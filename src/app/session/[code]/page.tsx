@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { isValidSessionCode } from "@/lib/session-codes";
 import { SessionPlayer } from "@/components/session-player";
+import { sanitizeScenarioForPlayer } from "@/lib/game";
 
 type Props = {
   params: Promise<{ code: string }>;
@@ -36,6 +37,7 @@ export default async function SessionPage({ params }: Props) {
               type: true,
               contextJson: true,
               eventsJson: true,
+              actionsJson: true,
             },
           },
         },
@@ -79,7 +81,7 @@ export default async function SessionPage({ params }: Props) {
         code={session.code}
         initialStatus={session.status}
         initialScenarioId={session.scenarioId}
-        scenarios={session.pack.scenarios}
+        scenarios={session.pack.scenarios.map(sanitizeScenarioForPlayer)}
       />
     </div>
   );

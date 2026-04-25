@@ -73,8 +73,15 @@ export function PlayerBoard({
   const pickedScenario = scenarioIdx !== null ? (scenarios[scenarioIdx] ?? null) : null;
   const scenario = lockedScenarioId ? lockedScenario : pickedScenario;
   const scenarioUnavailable = Boolean(lockedScenarioId && !lockedScenario);
+  const elapsedMin = (round - 1) * 5;
   const context = scenario ? asRecord(scenario.contextJson) : {};
   const scenarioEvents = scenario ? asArray<ScenarioTimelineEvent>(scenario.eventsJson) : [];
+  const openingScenarioEvents = scenarioEvents
+    .filter((event) => event.t === 0)
+    .sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
+  const revealedScenarioEvents = openingScenarioEvents.length > 0
+    ? openingScenarioEvents
+    : scenarioEvents.slice(0, 1);
 
   const incidentPhase = getIncidentPhase(round);
 
@@ -87,7 +94,6 @@ export function PlayerBoard({
   const health = Math.max(44, 100 - panic);
   const errorRate = ((100 - health) / 2.1).toFixed(1);
   const p99 = Math.round(150 + panic * 8);
-  const elapsedMin = (round - 1) * 5;
 
   function applyChoice(choice: ReturnType<typeof buildRoundActions>[number]) {
     if (locked || !scenario || usedKeys.has(choice.key)) return;
@@ -396,7 +402,7 @@ export function PlayerBoard({
           <div className="rounded-xl border border-white/10 bg-zinc-950/80 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Timeline</p>
             <div className="mt-3 space-y-2">
-              {scenarioEvents.slice(0, 4).map((event, i) => (
+              {revealedScenarioEvents.map((event, i) => (
                 <div key={`scenario-${i}`} className="rounded border border-amber-500/15 bg-amber-500/5 p-2 text-xs">
                   <p className="font-mono text-[10px] uppercase tracking-widest text-amber-400">
                     T+{event.t ?? "?"}м {event.type ? `· ${event.type}` : ""}
@@ -410,7 +416,7 @@ export function PlayerBoard({
                   {item}
                 </div>
               ))}
-              {!history.length && !scenarioEvents.length ? (
+              {!history.length && !revealedScenarioEvents.length ? (
                 <p className="text-sm text-zinc-500">История действий появится здесь.</p>
               ) : null}
             </div>

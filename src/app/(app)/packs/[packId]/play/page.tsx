@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PlayerBoard } from "@/components/player-board";
+import { sanitizeScenarioForPlayer } from "@/lib/game";
 
 type Props = {
   params: Promise<{ packId: string }>;
@@ -27,6 +28,7 @@ export default async function PlayPackPage({ params }: Props) {
           type: true,
           contextJson: true,
           eventsJson: true,
+          actionsJson: true,
         },
       },
     },
@@ -56,7 +58,7 @@ export default async function PlayPackPage({ params }: Props) {
           {isOwner ? <Link href={`/packs/${pack.id}/run`} className="btn">К ведущему</Link> : null}
         </div>
       </div>
-      <PlayerBoard scenarios={pack.scenarios} />
+      <PlayerBoard scenarios={pack.scenarios.map(sanitizeScenarioForPlayer)} />
     </div>
   );
 }

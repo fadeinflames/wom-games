@@ -176,7 +176,7 @@ const SCENARIOS: Array<{
       truth: "[Скрыто от игрока] В v2.1.3 утечка памяти при обработке файловых запросов. OOMKiller убивает под.",
     },
     eventsJson: [
-      { t: 2, type: "alert", title: "Первый алерт в PagerDuty", body: "```\n[FIRING] PodCrashLooping\nPod: api-backend-7d5f8c9b4-x8k2p\nRestarts: 3\nTime: 17:32\n```" },
+      { t: 0, type: "alert", title: "Первый алерт в PagerDuty", body: "```\n[FIRING] PodCrashLooping\nPod: api-backend-7d5f8c9b4-x8k2p\nRestarts: 3\nTime: 17:32\n```" },
       { t: 2, type: "event", title: "Смотрим поды", body: "```\napi-backend-7d5f8c9b4-x8k2p   0/1    CrashLoopBackOff  3  2m\napi-backend-7d5f8c9b4-m9n4t   1/1    Running           0  2m\napi-backend-7d5f8c9b4-p5q7w   1/1    Running           0  2m\n```" },
       { t: 4, type: "event", title: "Логи упавшего пода", body: "```\n$ kubectl logs api-backend-x8k2p --previous\n\n[INFO] Starting api-backend v2.1.3\n[WARN] Memory usage: 850MB / 1024MB\n[WARN] Memory usage: 980MB / 1024MB\n[ERROR] Signal: killed\n\nLast State:  Terminated\n  Reason:    OOMKilled\n  Exit Code: 137\n```" },
       { t: 5, type: "alert", title: "Каскад усиливается", body: "```\n[FIRING] Второй под тоже CrashLoop: api-backend-m9n4t\n[FIRING] HighErrorRate: 25%\nStatus: 502 Bad Gateway, 503 Service Unavailable\n```\nТретий под получает весь трафик: CPU 95%, memory 990MB." },
