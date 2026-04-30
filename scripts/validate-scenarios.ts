@@ -1,4 +1,5 @@
 import { SCENARIOS } from "../prisma/seed-scenarios";
+import { buildRoundActions } from "../src/lib/game";
 
 type ScenarioAction = {
   id?: string;
@@ -49,6 +50,7 @@ for (const scenario of SCENARIOS) {
   const actions = asActions(scenario.actionsJson);
   const gmScript = asGmScript(scenario.gmScriptJson);
   const actionIds = new Set<string>();
+  const scenarioDuration = typeof scenario.durationMin === "number" ? scenario.durationMin : 0;
 
   if (seenIds.has(scenario.id)) errors.push(`${label}: duplicate id ${scenario.id}`);
   seenIds.add(scenario.id);
@@ -78,14 +80,19 @@ for (const scenario of SCENARIOS) {
 
   if (events.length < 5) errors.push(`${label}: expected at least 5 timeline events`);
   let previousT = -1;
+  let hasMidgameEvent = false;
   for (const event of events) {
     if (typeof event.t !== "number") errors.push(`${label}: event missing numeric t`);
     if (typeof event.t === "number" && event.t < previousT) {
       errors.push(`${label}: eventsJson is not sorted by t`);
     }
+    if (typeof event.t === "number" && event.t > 0 && event.t <= scenarioDuration) {
+      hasMidgameEvent = true;
+    }
     previousT = typeof event.t === "number" ? event.t : previousT;
     if (!event.title || !event.body) errors.push(`${label}: event missing title/body`);
   }
+  if (!hasMidgameEvent) errors.push(`${label}: expected at least one timeline event after t=0`);
 
   if (hints.length < 2) errors.push(`${label}: expected at least 2 hints`);
   if (actions.length < 4) errors.push(`${label}: expected at least 4 actions`);
@@ -134,6 +141,22 @@ for (const scenario of SCENARIOS) {
     if (typeof beat.at === "number" && beat.at > scenario.durationMin) {
       errors.push(`${label}: beat at=${beat.at} exceeds duration ${scenario.durationMin}`);
     }
+  }
+
+  const phaseMenus = [
+    buildRoundActions(scenario, 1).map((action) => action.key),
+    buildRoundActions(scenario, 4).map((action) => action.key),
+    buildRoundActions(scenario, 7).map((action) => action.key),
+    buildRoundActions(scenario, 10).map((action) => action.key),
+  ];
+  for (const [index, menu] of phaseMenus.entries()) {
+    if (menu.length !== 4) errors.push(`${label}: phase menu ${index + 1} should expose 4 actions`);
+    if (new Set(menu).size !== menu.length) errors.push(`${label}: phase menu ${index + 1} has duplicate actions`);
+  }
+
+  const menuSignatures = phaseMenus.map((menu) => menu.join("|"));
+  if (new Set(menuSignatures).size < 3) {
+    errors.push(`${label}: phase action menus are too repetitive`);
   }
 }
 

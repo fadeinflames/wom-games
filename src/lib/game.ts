@@ -556,6 +556,70 @@ function actionImpactFromCategory(category?: string, priority?: number) {
   return priority === 1 ? base + 2 : base;
 }
 
+type OrderedScenarioAction = {
+  action: PlayerScenarioAction;
+  index: number;
+};
+
+const PHASE_ORDER: PhaseLabel[] = ["DETECTION", "INVESTIGATION", "MITIGATION", "RECOVERY"];
+
+function actionCategory(action: PlayerScenarioAction) {
+  return action.cat?.toLowerCase() ?? "";
+}
+
+function phaseWindowStart(length: number, phase: PhaseLabel) {
+  if (length <= 4) return 0;
+  if (phase === "DETECTION") return 0;
+  if (phase === "INVESTIGATION") return Math.min(Math.max(1, Math.floor(length * 0.25)), length - 4);
+  if (phase === "MITIGATION") return Math.min(Math.max(0, Math.floor(length * 0.55)), length - 4);
+  return Math.max(0, length - 4);
+}
+
+function appendUniqueAction(
+  target: OrderedScenarioAction[],
+  seen: Set<PlayerScenarioAction>,
+  item: OrderedScenarioAction,
+) {
+  if (seen.has(item.action)) return;
+  seen.add(item.action);
+  target.push(item);
+}
+
+function pickPhaseScenarioActions(source: OrderedScenarioAction[], phase: PhaseLabel) {
+  const phaseCategories: Record<PhaseLabel, string[]> = {
+    DETECTION: ["check", "logs", "exec", "observe", "inspect"],
+    INVESTIGATION: ["check", "logs", "exec", "observe", "inspect"],
+    MITIGATION: ["fix", "patch", "rollback", "restart", "scale", "danger"],
+    RECOVERY: ["fix", "patch", "rollback", "restart", "scale", "communicate", "status", "notify"],
+  };
+
+  const phaseIndex = PHASE_ORDER.indexOf(phase);
+  const start = phaseWindowStart(source.length, phase);
+  const phaseFloor = Math.floor((source.length * phaseIndex) / PHASE_ORDER.length);
+  const allowed = phaseCategories[phase];
+  const seen = new Set<PlayerScenarioAction>();
+  const picked: OrderedScenarioAction[] = [];
+  const add = (item: OrderedScenarioAction) => appendUniqueAction(picked, seen, item);
+
+  const matchingLaterActions = source.filter(({ action, index }) => (
+    allowed.includes(actionCategory(action)) && index >= phaseFloor
+  ));
+  const matchingActions = source.filter(({ action }) => allowed.includes(actionCategory(action)));
+
+  if (phase === "DETECTION" || phase === "INVESTIGATION") {
+    for (const item of matchingLaterActions) add(item);
+    for (const item of matchingActions) add(item);
+    for (const item of source.slice(start, start + 4)) add(item);
+  } else {
+    for (const item of source.slice(start, start + 4)) add(item);
+    for (const item of matchingLaterActions) add(item);
+    for (const item of matchingActions) add(item);
+  }
+  for (const item of source) add(item);
+
+  return picked.slice(0, 4);
+}
+
 function buildScenarioJsonActions(scenario: ScenarioLite, phase: PhaseLabel): GameAction[] {
   const source = asActionRecords(scenario.actionsJson);
   if (!source.length) return [];
@@ -563,21 +627,7 @@ function buildScenarioJsonActions(scenario: ScenarioLite, phase: PhaseLabel): Ga
   const sorted = source
     .map((action, index) => ({ action, index }))
     .sort((a, b) => (a.action.priority ?? 99) - (b.action.priority ?? 99) || a.index - b.index);
-
-  const phaseCategories: Record<PhaseLabel, string[]> = {
-    DETECTION: ["check", "logs", "exec", "observe", "inspect"],
-    INVESTIGATION: ["check", "logs", "exec", "observe", "inspect"],
-    MITIGATION: ["fix", "patch", "rollback", "restart", "scale", "danger"],
-    RECOVERY: ["fix", "patch", "rollback", "restart", "scale", "communicate", "status", "notify"],
-  };
-  const allowed = phaseCategories[phase];
-  const phaseMatches = sorted.filter(({ action }) => (
-    allowed.includes(action.cat?.toLowerCase() ?? "")
-  ));
-  const picked = [
-    ...phaseMatches,
-    ...sorted.filter(({ action }) => !phaseMatches.some((match) => match.action === action)),
-  ].slice(0, 4);
+  const picked = pickPhaseScenarioActions(sorted, phase);
 
   return picked.map(({ action, index }) => {
     const category = action.cat?.toUpperCase() ?? "ACTION";
