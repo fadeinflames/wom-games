@@ -123,7 +123,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
       {success ? (
         <p className="text-sm text-emerald-400">
-          {mode === "register" ? "Аккаунт создан! Переходим..." : "Вход выполнен! Переходим..."}
+          {mode === "register" ? "Аккаунт создан. Переходим..." : "Вход выполнен. Переходим..."}
         </p>
       ) : null}
 

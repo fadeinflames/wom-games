@@ -13,7 +13,7 @@ function id(n: number) {
   return `cmwomscenario${String(n).padStart(2, "0")}00000000000`;
 }
 
-const SCENARIOS: Array<{
+export const SCENARIOS: Array<{
   id: string;
   title: string;
   summary: string;
@@ -617,6 +617,7 @@ const SCENARIOS: Array<{
       { t: 3, type: "event", title: "ReplicaSet не создаёт поды", body: "```\nFailedCreate: pods \"report-api-7c4...\" is forbidden:\nexceeded quota: prod-quota, requested: requests.cpu=800m, used: 3900m, limited: 4\n```" },
       { t: 7, type: "event", title: "Вторая ловушка", body: "Даже когда уменьшаешь requests, срабатывает LimitRange:\n```\nminimum cpu usage per Container is 200m\n```\nПросто поставить `50m` нельзя." },
       { t: 12, type: "event", title: "Правильный ход", body: "Нужно либо временно уменьшить количество реплик у менее критичного worker, либо согласованно править quota/requests. Бездумно удалять quota нельзя." },
+      { t: 16, type: "event", title: "Контроль после фикса", body: "После освобождения quota `kubectl rollout status deployment/report-api` завершается успешно. В postmortem фиксируют action item: регулярный отчёт по requests и алерт на namespace quota > 85%." },
     ],
     hintsJson: [
       { when: "Думает что проблема в образе", gm: "Смотри Events у ReplicaSet/Deployment", chat: "FailedCreate часто сразу говорит root cause", team: "kubectl describe deploy report-api" },
@@ -671,6 +672,7 @@ const SCENARIOS: Array<{
       { t: 4, type: "event", title: "Список job", body: "```\nnightly-export-2891   0/1  Running  23m\nnightly-export-2892   0/1  Running  18m\nnightly-export-2893   0/1  Running  13m\nnightly-export-2894   0/1  Running   8m\nnightly-export-2895   0/1  Running   3m\n```\nКаждая job длится 20+ минут, но новая стартует каждые 5." },
       { t: 8, type: "event", title: "Корень проблемы", body: "В CronJob стоит `concurrencyPolicy: Allow`. Job-ы наезжают друг на друга и одновременно читают тяжёлые данные из postgres." },
       { t: 13, type: "event", title: "Фикс", body: "Нужно остановить новые запуски (`suspend: true`), прибить лишние job/pod-ы и поменять политику на `Forbid` или `Replace`." },
+      { t: 16, type: "event", title: "Проверка восстановления", body: "После `suspend` и удаления лишних job нагрузка на postgres падает, API latency возвращается к baseline. Следующий запуск разрешают только после смены `concurrencyPolicy` и лимитов на job." },
     ],
     hintsJson: [
       { when: "Не смотрит batch объекты", gm: "Проблема может быть не в deployment, а в job-ах", chat: "kubectl get cronjobs,jobs", team: "Batch тоже часть кластера" },
@@ -725,6 +727,7 @@ const SCENARIOS: Array<{
       { t: 4, type: "event", title: "Два ingress на один host", body: "Два Ingress ресурса с одинаковым host `shop.example.ru`. nginx-ingress мерджит правила по `creationTimestamp`; аннотация `nginx.ingress.kubernetes.io/rewrite-target: /` + `pathType: ImplementationSpecific` на promo-ingress переключает путь в regex-режим и перехватывает всё, включая `/api`." },
       { t: 9, type: "event", title: "Симптом", body: "```\n$ curl -H \"Host: shop.example.ru\" https://lb/api/orders\n<html>promo landing</html>\n```\nМаршрут реально уходит не в `shop-api`." },
       { t: 14, type: "event", title: "Фикс", body: "Нужно либо объединить правила в один ingress, либо выставить корректные `pathType: Prefix` и убрать конфликтующий wildcard route." },
+      { t: 18, type: "event", title: "Регрессионная проверка", body: "После правки проверяют `/api/orders`, `/promo` и `/static` отдельными curl с Host header. Все три route возвращают ожидаемый content-type, а в change checklist добавляют запрет на второй wildcard ingress для того же host." },
     ],
     hintsJson: [
       { when: "Смотрит только поды", gm: "Поды healthy, а ответ не тот. Где может искажаться маршрут?", chat: "Ingress / LB слой", team: "kubectl get ingress -A" },
@@ -780,6 +783,7 @@ const SCENARIOS: Array<{
       { t: 5, type: "event", title: "Метрика оказалась суммой по всему сервису", body: "HPA читает aggregated gauge без деления по pod. Чем больше подов поднимается, тем больше становится метрика, и скейлер ещё сильнее разгоняется." },
       { t: 11, type: "event", title: "Петля обратной связи", body: "Новая схема создала self-amplifying loop: больше подов → больше total in_flight → HPA думает, что нужен ещё scale up." },
       { t: 15, type: "event", title: "Фикс", body: "Нужно временно зафиксировать replicas, отключить HPA или вернуть CPU-based autoscaling, а затем починить запрос в Prometheus Adapter." },
+      { t: 18, type: "event", title: "Стабилизация", body: "После freeze на 6 репликах scheduling storm прекращается. Permanent fix принимают только после графика, где метрика нормализована на pod и больше не растёт от самого scale-out." },
     ],
     hintsJson: [
       { when: "Не смотрит HPA", gm: "Количество реплик само прыгает. Кто это делает?", chat: "kubectl describe hpa", team: "Смотри current vs target metrics" },
@@ -833,6 +837,7 @@ const SCENARIOS: Array<{
       { t: 4, type: "event", title: "Логи media-api", body: "```\nAccessDenied: InvalidAccessKeyId\nstatus code: 403\n```\nСтарые файлы читаются, новые не записываются." },
       { t: 9, type: "event", title: "Secret не обновился", body: "ExternalSecret в статусе `Error`, потому что роль для чтения из vault тоже поменялась. В кластере лежит устаревший S3 key." },
       { t: 14, type: "event", title: "Фикс", body: "Нужно обновить Secret корректным ключом, перезапустить deployment и отдельно разобраться с ExternalSecret/Vault доступом." },
+      { t: 18, type: "event", title: "Что проверяем после", body: "Тестовый upload, чтение старого файла и thumbnail-worker проходят на новом ключе. ExternalSecret должен снова иметь `Ready=True`, иначе следующая ротация повторит инцидент." },
     ],
     hintsJson: [
       { when: "Смотрит только ingress", gm: "Проблема только на upload. Что отличается от обычного чтения?", chat: "Внешнее хранилище", team: "Логи media-api обычно честно говорят про S3" },
@@ -887,6 +892,7 @@ const SCENARIOS: Array<{
       { t: 4, type: "event", title: "Корень в /var/log/containers", body: "```\n$ du -sh /var/log/containers/* | sort -h | tail\n18G recommendation-api-aaa.log\n17G recommendation-api-bbb.log\n```\nПроблема не в PV, а в локальном диске ноды." },
       { t: 9, type: "event", title: "Loki agent не успевает", body: "Агент отправки логов застрял на backpressure. Логи не отгружаются, а recommendation-api продолжает flood." },
       { t: 14, type: "event", title: "Фикс", body: "Нужно выключить debug, перезапустить noisy pods и временно очистить место безопасным способом через container runtime." },
+      { t: 18, type: "event", title: "Возврат ноды", body: "`DiskPressure=False`, eviction прекращается, Loki backlog уменьшается. В follow-up добавляют лимиты на размер container logs и запрет debug payload без sampling." },
     ],
     hintsJson: [
       { when: "Смотрит только PVC", gm: "DiskPressure может быть на локальном диске ноды", chat: "Смотри node filesystem, не только volumes", team: "df -h на ноде или kubectl debug node" },
@@ -944,6 +950,7 @@ const SCENARIOS: Array<{
       { t: 5, type: "event", title: "Логи неоднозначны", body: "```\nAccessDenied: kms.decrypt denied\n```\nСначала кажется что сломан KMS, но на деле проблема в облачной роли workload identity." },
       { t: 10, type: "event", title: "В Kubernetes всё зелёное", body: "Job запускается, pod healthy, secret на месте. Всё ломается только на вызове облачного API." },
       { t: 16, type: "event", title: "Фикс", body: "Нужно вернуть минимально достаточную IAM роль на cloud service account, не скатываясь обратно в admin." },
+      { t: 20, type: "event", title: "Закрытие RPO gap", body: "После возврата роли запускают manual backup из CronJob и сверяют наличие свежего snapshot в bucket. Security получает точный diff разрешений вместо широкой admin-роли." },
     ],
     hintsJson: [
       { when: "Смотрит только k8s", gm: "А если внутри кластера всё ок, где ещё может ломаться?", chat: "Облако под Kubernetes тоже имеет права", team: "Смотри cloud IAM и service account binding" },
@@ -999,6 +1006,7 @@ const SCENARIOS: Array<{
       { t: 5, type: "event", title: "Локально метрики есть", body: "Внутри самого Prometheus targets зелёные, scrape идёт. Но в центральной системе новые точки не появляются." },
       { t: 10, type: "event", title: "Растёт очередь remote_write", body: "```\nprometheus_remote_storage_pending_samples 8.2e+07\n```\nTLS handshake fails, но локальные scraping и часть alerting rules ещё работают." },
       { t: 16, type: "event", title: "Фикс", body: "Нужно вернуть корректный CA bundle / endpoint remote_write и убедиться, что backlog начал уходить, а не просто обнулился после рестарта с потерей данных." },
+      { t: 20, type: "event", title: "Наблюдаемость снова наблюдаема", body: "`pending_samples` монотонно падает, новые точки видны в central TSDB, test alert проходит end-to-end через Alertmanager. В runbook добавляют canary для remote_write." },
     ],
     hintsJson: [
       { when: "Не видит что проблема в наблюдаемости", gm: "Иногда отсутствие алертов и есть алерт", chat: "Too quiet is suspicious", team: "Проверь health самого monitoring pipeline" },
@@ -1134,10 +1142,12 @@ async function main() {
   console.log("\nDone!");
 }
 
-main()
-  .then(() => prisma.$disconnect())
-  .catch(async (e) => {
-    console.error(e);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main()
+    .then(() => prisma.$disconnect())
+    .catch(async (e) => {
+      console.error(e);
+      await prisma.$disconnect();
+      process.exit(1);
+    });
+}

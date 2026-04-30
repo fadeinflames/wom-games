@@ -62,7 +62,7 @@ export function ImportJsonForm({ packId }: { packId: string }) {
         return;
       }
       const n = data.count ?? "?";
-      setOk(`✅ Импортировано сценариев: ${n}. Страница обновляется…`);
+      setOk(`Импортировано сценариев: ${n}. Страница обновляется...`);
       setTimeout(() => window.location.reload(), 1200);
     } catch {
       setError("Ошибка соединения. Попробуй ещё раз.");

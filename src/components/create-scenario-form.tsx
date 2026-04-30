@@ -153,7 +153,7 @@ export function CreateScenarioForm({ packId }: { packId: string }) {
       </Field>
 
       {error && <p className="text-sm text-red-400">{error}</p>}
-      {ok && <p className="text-sm text-emerald-400">✅ Сценарий добавлен!</p>}
+      {ok && <p className="text-sm text-emerald-400">Сценарий добавлен. Обновляем страницу...</p>}
 
       <button className="btn btn-primary" disabled={loading}>
         {loading ? "Добавляем…" : "Добавить сценарий"}

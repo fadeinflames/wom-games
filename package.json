@@ -10,7 +10,8 @@
     "prisma:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "validate:scenarios": "tsx scripts/validate-scenarios.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.0",
@@ -31,8 +32,5 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   }
 }

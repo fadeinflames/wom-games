@@ -18,8 +18,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Wheel of Misfortune Platform",
+  metadataBase: new URL("https://web-production-d58c3.up.railway.app"),
+  title: {
+    default: "Wheel of Misfortune",
+    template: "%s · Wheel of Misfortune",
+  },
   description: "Open-source платформа для SRE incident games",
+  openGraph: {
+    title: "Wheel of Misfortune",
+    description: "Open-source платформа для SRE incident games",
+    type: "website",
+  },
 };
 
 export default async function RootLayout({
@@ -31,34 +40,37 @@ export default async function RootLayout({
 
   return (
     <html
-      lang="en"
+      lang="ru"
       className={`${display.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <header className="border-b border-white/10 bg-black/60 backdrop-blur">
+        <a href="#main-content" className="skip-link">К содержимому</a>
+        <header className="sticky top-0 z-40 border-b border-white/10 bg-zinc-950/75 backdrop-blur-xl">
           <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3">
-            <Link href="/" className="font-[var(--font-display)] text-lg font-bold tracking-wide text-amber-400">
+            <Link href="/" className="font-[var(--font-display)] text-lg font-black tracking-wide text-amber-400 transition hover:text-amber-300">
               WHEEL OF MISFORTUNE
             </Link>
             <nav className="flex items-center gap-3 text-sm text-zinc-300">
-              <Link href="/gallery" className="hover:text-white">Галерея</Link>
+              <Link href="/gallery" className="transition hover:text-white">Галерея</Link>
               {user ? (
                 <>
-                  <Link href="/dashboard" className="hover:text-white">Мои игры</Link>
+                  <Link href="/dashboard" className="transition hover:text-white">Мои игры</Link>
                   <span className="rounded border border-white/20 px-2 py-1 text-xs">{user.username}</span>
                   <LogoutButton />
                 </>
               ) : (
                 <>
-                  <Link href="/login" className="hover:text-white">Войти</Link>
-                  <Link href="/register" className="rounded bg-amber-500 px-3 py-1 text-black hover:bg-amber-400">Регистрация</Link>
+                  <Link href="/login" className="transition hover:text-white">Войти</Link>
+                  <Link href="/register" className="rounded-md bg-amber-500 px-3 py-1.5 text-black transition hover:bg-amber-400">Регистрация</Link>
                 </>
               )}
             </nav>
           </div>
         </header>
-        <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-8">{children}</main>
+        <main id="main-content" className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-8 md:py-10">
+          {children}
+        </main>
       </body>
     </html>
   );
