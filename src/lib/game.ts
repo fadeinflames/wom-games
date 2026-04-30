@@ -27,6 +27,8 @@ type PlayerScenarioAction = {
   id?: string;
   cat?: string;
   label?: string;
+  body?: string;
+  description?: string;
   response?: string;
   priority?: number;
 };
@@ -41,6 +43,8 @@ function asActionRecords(value: unknown): PlayerScenarioAction[] {
       id: typeof item.id === "string" ? item.id : undefined,
       cat: typeof item.cat === "string" ? item.cat : undefined,
       label: typeof item.label === "string" ? item.label : undefined,
+      body: typeof item.body === "string" ? item.body : undefined,
+      description: typeof item.description === "string" ? item.description : undefined,
       response: typeof item.response === "string" ? item.response : undefined,
       priority: typeof item.priority === "number" ? item.priority : undefined,
     }))
@@ -556,6 +560,47 @@ function actionImpactFromCategory(category?: string, priority?: number) {
   return priority === 1 ? base + 2 : base;
 }
 
+function actionDescription(action: PlayerScenarioAction) {
+  const explicit = action.description ?? action.body;
+  if (explicit?.trim()) return explicit.trim();
+
+  const label = action.label ?? "это действие";
+  const cat = actionCategory(action);
+
+  if (cat === "logs") {
+    return `Посмотреть логи через "${label}": ищем конкретную ошибку, стек или повторяющийся симптом, который объясняет текущее поведение сервиса.`;
+  }
+  if (cat === "exec") {
+    return `Выполнить команду внутри пода или ноды: проверяем фактическое состояние среды, файлов, сети или переменных, а не только Kubernetes-статус.`;
+  }
+  if (cat === "check" || cat === "inspect" || cat === "observe") {
+    return `Собрать диагностические факты через "${label}": проверить состояние ресурса, события и параметры, чтобы сузить root cause.`;
+  }
+  if (cat === "fix" || cat === "patch") {
+    return `Применить исправление: изменить конфигурацию или ресурс так, чтобы снять текущую причину инцидента и проверить эффект.`;
+  }
+  if (cat === "rollback") {
+    return `Откатить проблемное изменение: быстро вернуть рабочую версию и снизить пользовательский импакт, пока root cause разбирают отдельно.`;
+  }
+  if (cat === "restart") {
+    return `Перезапустить затронутый workload: заставить поды перечитать конфигурацию или выйти из застрявшего состояния.`;
+  }
+  if (cat === "scale") {
+    return `Изменить количество реплик или нагрузку: временно стабилизировать сервис и освободить ресурсы для восстановления.`;
+  }
+  if (cat === "danger") {
+    return `Рискованное действие: может дать быстрый эффект, но способно усугубить инцидент или потерять данные. Используй только если понимаешь последствия.`;
+  }
+  if (cat === "communicate" || cat === "status" || cat === "notify") {
+    return `Коммуникационный шаг: синхронизировать команду и пользователей, зафиксировать статус, импакт и следующий ETA.`;
+  }
+  if (cat === "incident" || cat === "decision") {
+    return `Управленческое действие: принять решение по инциденту, назначить владельцев и держать расследование в понятном русле.`;
+  }
+
+  return `Выполнить действие "${label}" и использовать результат как следующий факт в расследовании инцидента.`;
+}
+
 type OrderedScenarioAction = {
   action: PlayerScenarioAction;
   index: number;
@@ -634,7 +679,7 @@ function buildScenarioJsonActions(scenario: ScenarioLite, phase: PhaseLabel): Ga
     return {
       key: action.id ?? `${category.toLowerCase()}-${index}`,
       title: action.label ?? "Действие",
-      body: category,
+      body: actionDescription(action),
       result: action.response ?? "Результат действия зафиксирован.",
       variant: actionVariantFromCategory(action.cat),
       impact: actionImpactFromCategory(action.cat, action.priority),

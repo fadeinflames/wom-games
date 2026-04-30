@@ -5,6 +5,8 @@ type ScenarioAction = {
   id?: string;
   cat?: string;
   label?: string;
+  body?: string;
+  description?: string;
   response?: string;
   priority?: number;
 };
@@ -107,6 +109,9 @@ for (const scenario of SCENARIOS) {
     if (!action.cat || !action.label || !action.response) {
       errors.push(`${label}: action ${action.id} missing cat/label/response`);
     }
+    if (action.response && (action.response.match(/```/g)?.length ?? 0) % 2 !== 0) {
+      errors.push(`${label}: action ${action.id} has unbalanced fenced code block`);
+    }
   }
 
   const hasPriorityAction = actions.some((action) => action.priority === 1);
@@ -152,6 +157,14 @@ for (const scenario of SCENARIOS) {
   for (const [index, menu] of phaseMenus.entries()) {
     if (menu.length !== 4) errors.push(`${label}: phase menu ${index + 1} should expose 4 actions`);
     if (new Set(menu).size !== menu.length) errors.push(`${label}: phase menu ${index + 1} has duplicate actions`);
+  }
+  for (const action of [1, 4, 7, 10].flatMap((round) => buildRoundActions(scenario, round))) {
+    if (action.body.length < 40) {
+      errors.push(`${label}: action ${action.key} body is too terse`);
+    }
+    if (/^(CHECK|FIX|LOGS|EXEC|PATCH|ROLLBACK|SCALE|RESTART|DANGER)$/i.test(action.body.trim())) {
+      errors.push(`${label}: action ${action.key} body is only a category label`);
+    }
   }
 
   const menuSignatures = phaseMenus.map((menu) => menu.join("|"));

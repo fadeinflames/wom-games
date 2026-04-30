@@ -16,6 +16,7 @@ type GamePhase = "playing" | "done";
 
 type ScenarioContext = Record<string, unknown>;
 type ScenarioTimelineEvent = { t?: number; type?: string; title?: string; body?: string };
+type RichTextPart = { kind: "text" | "code"; value: string };
 
 function asRecord(value: unknown): ScenarioContext {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -25,6 +26,75 @@ function asRecord(value: unknown): ScenarioContext {
 
 function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function splitRichText(value: string): RichTextPart[] {
+  const parts: RichTextPart[] = [];
+  const fencePattern = /```(?:[a-zA-Z0-9_-]+)?\n?([\s\S]*?)```/g;
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = fencePattern.exec(value)) !== null) {
+    if (match.index > cursor) {
+      parts.push({ kind: "text", value: value.slice(cursor, match.index) });
+    }
+    parts.push({ kind: "code", value: match[1].trim() });
+    cursor = match.index + match[0].length;
+  }
+
+  if (cursor < value.length) {
+    parts.push({ kind: "text", value: value.slice(cursor) });
+  }
+
+  return parts.length ? parts : [{ kind: "text", value }];
+}
+
+function renderInlineText(value: string) {
+  const chunks = value.split(/(`[^`]+`)/g).filter(Boolean);
+  return chunks.map((chunk, index) => {
+    if (chunk.startsWith("`") && chunk.endsWith("`") && chunk.length > 1) {
+      return (
+        <code key={index} className="rounded bg-white/10 px-1 py-0.5 font-mono text-[0.92em] text-emerald-200">
+          {chunk.slice(1, -1)}
+        </code>
+      );
+    }
+    return <span key={index}>{chunk}</span>;
+  });
+}
+
+function RichText({ text, compact = false }: { text: string; compact?: boolean }) {
+  return (
+    <div className={compact ? "space-y-1.5" : "space-y-3"}>
+      {splitRichText(text).map((part, index) => {
+        if (part.kind === "code") {
+          return (
+            <pre
+              key={index}
+              className="overflow-x-auto rounded-md border border-emerald-500/20 bg-black/55 p-3 font-mono text-xs leading-relaxed text-emerald-100 whitespace-pre-wrap"
+            >
+              <code>{part.value}</code>
+            </pre>
+          );
+        }
+
+        return part.value
+          .split(/\n{2,}/)
+          .map((paragraph) => paragraph.trim())
+          .filter(Boolean)
+          .map((paragraph, paragraphIndex) => (
+            <p key={`${index}-${paragraphIndex}`} className={compact ? "text-xs leading-relaxed" : "text-sm leading-relaxed"}>
+              {paragraph.split("\n").map((line, lineIndex) => (
+                <span key={lineIndex}>
+                  {lineIndex > 0 ? <br /> : null}
+                  {renderInlineText(line)}
+                </span>
+              ))}
+            </p>
+          ));
+      })}
+    </div>
+  );
 }
 
 export type PlayerEvent =
@@ -349,9 +419,11 @@ export function PlayerBoard({
 
               {/* Result card — appears after choice */}
               {lastResult && (
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/30 p-4 space-y-1">
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/30 p-4 space-y-3">
                   <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Результат</p>
-                  <p className="text-sm text-zinc-200 leading-relaxed">{lastResult}</p>
+                  <div className="text-zinc-200">
+                    <RichText text={lastResult} />
+                  </div>
                 </div>
               )}
             </div>
@@ -409,7 +481,11 @@ export function PlayerBoard({
                     T+{event.t ?? "?"}м {event.type ? `· ${event.type}` : ""}
                   </p>
                   {event.title && <p className="mt-1 font-semibold text-zinc-200">{event.title}</p>}
-                  {event.body && <p className="mt-0.5 text-zinc-400">{event.body}</p>}
+                  {event.body && (
+                    <div className="mt-1 text-zinc-400">
+                      <RichText text={event.body} compact />
+                    </div>
+                  )}
                 </div>
               ))}
               {history.map((item, i) => (
