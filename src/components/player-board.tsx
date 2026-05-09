@@ -17,6 +17,7 @@ type GamePhase = "playing" | "done";
 type ScenarioContext = Record<string, unknown>;
 type ScenarioTimelineEvent = { t?: number; type?: string; title?: string; body?: string };
 type RichTextPart = { kind: "text" | "code"; value: string };
+type InlineTextPart = { kind: "text" | "code" | "strong"; value: string };
 
 function asRecord(value: unknown): ScenarioContext {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -49,17 +50,61 @@ function splitRichText(value: string): RichTextPart[] {
   return parts.length ? parts : [{ kind: "text", value }];
 }
 
+function splitInlineText(value: string): InlineTextPart[] {
+  const parts: InlineTextPart[] = [];
+  let cursor = 0;
+
+  while (cursor < value.length) {
+    const codeStart = value.indexOf("`", cursor);
+    const strongStart = value.indexOf("**", cursor);
+    const candidates = [codeStart, strongStart].filter((index) => index >= 0);
+
+    if (!candidates.length) {
+      parts.push({ kind: "text", value: value.slice(cursor) });
+      break;
+    }
+
+    const next = Math.min(...candidates);
+    if (next > cursor) {
+      parts.push({ kind: "text", value: value.slice(cursor, next) });
+    }
+
+    if (next === codeStart && (strongStart === -1 || codeStart < strongStart)) {
+      const end = value.indexOf("`", next + 1);
+      if (end === -1) {
+        parts.push({ kind: "text", value: value.slice(next) });
+        break;
+      }
+      parts.push({ kind: "code", value: value.slice(next + 1, end) });
+      cursor = end + 1;
+      continue;
+    }
+
+    const end = value.indexOf("**", next + 2);
+    if (end === -1) {
+      parts.push({ kind: "text", value: value.slice(next) });
+      break;
+    }
+    parts.push({ kind: "strong", value: value.slice(next + 2, end) });
+    cursor = end + 2;
+  }
+
+  return parts.filter((part) => part.value.length > 0);
+}
+
 function renderInlineText(value: string) {
-  const chunks = value.split(/(`[^`]+`)/g).filter(Boolean);
-  return chunks.map((chunk, index) => {
-    if (chunk.startsWith("`") && chunk.endsWith("`") && chunk.length > 1) {
+  return splitInlineText(value).map((part, index) => {
+    if (part.kind === "code") {
       return (
         <code key={index} className="rounded bg-white/10 px-1 py-0.5 font-mono text-[0.92em] text-emerald-200">
-          {chunk.slice(1, -1)}
+          {part.value}
         </code>
       );
     }
-    return <span key={index}>{chunk}</span>;
+    if (part.kind === "strong") {
+      return <strong key={index} className="font-semibold text-zinc-100">{part.value}</strong>;
+    }
+    return <span key={index}>{part.value}</span>;
   });
 }
 
@@ -145,14 +190,10 @@ export function PlayerBoard({
   const scenarioUnavailable = Boolean(lockedScenarioId && !lockedScenario);
   const elapsedMin = (round - 1) * 5;
   const context = scenario ? asRecord(scenario.contextJson) : {};
-  const scenarioEvents = scenario ? asArray<ScenarioTimelineEvent>(scenario.eventsJson) : [];
-  const revealedScenarioEvents = scenarioEvents
-    .filter((event) => typeof event.t !== "number" || event.t <= elapsedMin)
-    .sort((a, b) => (a.t ?? 0) - (b.t ?? 0))
-    .slice(-5);
-  const visibleScenarioEvents = revealedScenarioEvents.length > 0
-    ? revealedScenarioEvents
-    : scenarioEvents.slice(0, 1);
+  const scenarioEvents = (scenario ? asArray<ScenarioTimelineEvent>(scenario.eventsJson) : [])
+    .sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
+  const revealedScenarioEvents = scenarioEvents.filter((event) => typeof event.t !== "number" || event.t <= elapsedMin);
+  const currentScenarioEvent = revealedScenarioEvents.at(-1) ?? scenarioEvents[0] ?? null;
 
   const incidentPhase = getIncidentPhase(round);
 
@@ -336,6 +377,7 @@ export function PlayerBoard({
             className="btn btn-primary"
             onClick={nextRound}
             disabled={!locked}
+            aria-disabled={!locked}
           >
             {round >= MAX_ROUNDS ? "Завершить инцидент" : "Следующий шаг"}
           </button>
@@ -395,6 +437,7 @@ export function PlayerBoard({
                   <button
                     key={choice.key}
                     type="button"
+                    disabled={locked || usedKeys.has(choice.key)}
                     className={`rounded-xl border bg-zinc-950/75 p-4 text-left transition border-white/15 ${
                       selectedAction === choice.key
                         ? "ring-1 ring-amber-400 border-amber-400/50"
@@ -473,27 +516,27 @@ export function PlayerBoard({
 
           {/* Timeline */}
           <div className="rounded-xl border border-white/10 bg-zinc-950/80 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Timeline</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Сигнал сценария</p>
             <div className="mt-3 space-y-2">
-              {visibleScenarioEvents.map((event, i) => (
-                <div key={`scenario-${i}`} className="rounded border border-amber-500/15 bg-amber-500/5 p-2 text-xs">
+              {currentScenarioEvent ? (
+                <div className="rounded border border-amber-500/15 bg-amber-500/5 p-2 text-xs">
                   <p className="font-mono text-[10px] uppercase tracking-widest text-amber-400">
-                    T+{event.t ?? "?"}м {event.type ? `· ${event.type}` : ""}
+                    T+{currentScenarioEvent.t ?? "?"}м {currentScenarioEvent.type ? `· ${currentScenarioEvent.type}` : ""}
                   </p>
-                  {event.title && <p className="mt-1 font-semibold text-zinc-200">{event.title}</p>}
-                  {event.body && (
+                  {currentScenarioEvent.title && <p className="mt-1 font-semibold text-zinc-200">{currentScenarioEvent.title}</p>}
+                  {currentScenarioEvent.body && (
                     <div className="mt-1 text-zinc-400">
-                      <RichText text={event.body} compact />
+                      <RichText text={currentScenarioEvent.body} compact />
                     </div>
                   )}
                 </div>
-              ))}
+              ) : null}
               {history.map((item, i) => (
                 <div key={i} className="rounded border border-white/10 bg-white/[0.025] p-2 text-xs text-zinc-300">
                   {item}
                 </div>
               ))}
-              {!history.length && !revealedScenarioEvents.length ? (
+              {!history.length && !currentScenarioEvent ? (
                 <p className="text-sm text-zinc-500">История действий появится здесь.</p>
               ) : null}
             </div>
