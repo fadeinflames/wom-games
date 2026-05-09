@@ -44,20 +44,20 @@ export default async function PlayPackPage({ params }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="card flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-5">
+      <section className="flex flex-wrap items-end justify-between gap-3 border-b border-white/10 pb-5">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Player View</p>
-          <h1 className="font-[var(--font-display)] text-3xl font-bold">{pack.title}</h1>
-          <p className="text-sm text-zinc-400">
-            Тренировочный режим игрока в стиле incident quest.
+          <p className="kicker text-emerald-300">Player view</p>
+          <h1 className="mt-2 font-[var(--font-display)] text-4xl font-black">{pack.title}</h1>
+          <p className="mt-2 max-w-[64ch] text-sm leading-relaxed text-zinc-400">
+            Соло-режим для расследования: 10 раундов, выбор действий, score и panic.
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href={`/packs/${pack.id}`} className="btn">К pack</Link>
+          <Link href={`/packs/${pack.id}`} className="btn">К паку</Link>
           {isOwner ? <Link href={`/packs/${pack.id}/run`} className="btn">К ведущему</Link> : null}
         </div>
-      </div>
+      </section>
       <PlayerBoard scenarios={pack.scenarios.map(sanitizeScenarioForPlayer)} />
     </div>
   );

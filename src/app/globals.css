@@ -1,10 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #07090c;
-  --foreground: #ece7dc;
-  --muted: #a9a29a;
-  --panel: rgba(18, 20, 22, 0.78);
+  --background: oklch(10.5% 0.018 210);
+  --foreground: oklch(92.5% 0.025 82);
+  --muted: oklch(69% 0.025 82);
+  --panel: oklch(15.5% 0.018 210 / 0.86);
+  --panel-strong: oklch(18% 0.02 210 / 0.92);
+  --panel-soft: oklch(20% 0.024 210 / 0.58);
+  --line: oklch(92% 0.02 82 / 0.11);
+  --line-strong: oklch(92% 0.02 82 / 0.18);
+  --amber: oklch(76% 0.152 72);
+  --emerald: oklch(72% 0.11 160);
+  --cyan: oklch(72% 0.096 210);
+  --danger: oklch(67% 0.13 25);
 }
 
 @theme inline {
@@ -28,10 +36,12 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
+  isolation: isolate;
   background-image:
-    radial-gradient(circle at 18% 0%, rgba(214, 146, 60, 0.16), transparent 34rem),
-    radial-gradient(circle at 85% 18%, rgba(72, 135, 133, 0.11), transparent 30rem),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 18rem);
+    radial-gradient(circle at 12% -8%, oklch(76% 0.152 72 / 0.18), transparent 34rem),
+    radial-gradient(circle at 92% 6%, oklch(72% 0.096 210 / 0.13), transparent 31rem),
+    radial-gradient(circle at 70% 72%, oklch(72% 0.11 160 / 0.075), transparent 42rem),
+    linear-gradient(180deg, oklch(100% 0 0 / 0.035), transparent 18rem);
   background-attachment: fixed;
 }
 
@@ -43,12 +53,12 @@ body::before {
   z-index: -1;
   background-image: repeating-linear-gradient(
     0deg,
-    rgba(255, 255, 255, 0.018) 0,
-    rgba(255, 255, 255, 0.018) 1px,
+    oklch(100% 0 0 / 0.018) 0,
+    oklch(100% 0 0 / 0.018) 1px,
     transparent 1px,
     transparent 4px
   );
-  opacity: 0.34;
+  opacity: 0.38;
 }
 
 ::selection {
@@ -56,21 +66,87 @@ body::before {
 }
 
 .card {
-  @apply rounded-lg border border-white/10 p-6 shadow-[0_18px_70px_rgba(0,0,0,0.28)];
+  @apply rounded-lg border p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)];
   background: var(--panel);
+  border-color: var(--line);
   backdrop-filter: blur(18px);
 }
 
+.panel {
+  @apply rounded-lg border p-4;
+  background: var(--panel-soft);
+  border-color: var(--line);
+}
+
+.panel-strong {
+  @apply rounded-lg border p-4 shadow-[0_14px_50px_rgba(0,0,0,0.22)];
+  background: var(--panel-strong);
+  border-color: var(--line-strong);
+}
+
+.code-panel {
+  @apply overflow-x-auto rounded-lg border p-3 font-mono text-xs leading-relaxed text-zinc-300;
+  background: oklch(12.5% 0.018 210 / 0.82);
+  border-color: var(--line);
+}
+
 .btn {
-  @apply inline-flex items-center justify-center rounded-md border border-white/20 px-3 py-2 text-sm font-medium transition duration-200 hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/[0.07] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0;
+  @apply inline-flex min-h-9 items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition duration-200 hover:-translate-y-0.5 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0;
+  border-color: var(--line-strong);
+  background: oklch(100% 0 0 / 0.025);
+  color: var(--foreground);
+}
+
+.btn:hover {
+  border-color: oklch(92% 0.02 82 / 0.32);
+  background: oklch(100% 0 0 / 0.065);
 }
 
 .btn-primary {
-  @apply border-amber-500 bg-amber-500 text-black shadow-[0_10px_30px_rgba(245,158,11,0.18)] hover:bg-amber-400;
+  @apply border-transparent text-zinc-950;
+  background: var(--amber);
+  box-shadow: 0 12px 32px oklch(76% 0.152 72 / 0.2);
+}
+
+.btn-primary:hover {
+  background: oklch(81% 0.15 72);
+}
+
+.btn-danger {
+  @apply text-red-300;
+  border-color: oklch(67% 0.13 25 / 0.42);
+  background: oklch(67% 0.13 25 / 0.08);
+}
+
+.btn-danger:hover {
+  border-color: oklch(67% 0.13 25 / 0.72);
+  background: oklch(67% 0.13 25 / 0.12);
+}
+
+.kicker {
+  @apply text-xs font-medium uppercase text-amber-300;
+  letter-spacing: 0.18em;
+}
+
+.muted-label {
+  @apply text-xs font-medium uppercase text-zinc-500;
+  letter-spacing: 0.16em;
+}
+
+.status-pill {
+  @apply inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-xs uppercase;
+  border-color: var(--line-strong);
+  background: oklch(100% 0 0 / 0.025);
+}
+
+.text-link {
+  @apply text-amber-300 transition hover:text-amber-200 hover:underline;
 }
 
 .field {
-  @apply w-full rounded-md border border-white/15 bg-zinc-950/70 px-3 py-2 text-sm text-white placeholder:text-zinc-500 transition duration-200 focus:border-amber-400 focus:outline-none;
+  @apply w-full rounded-md border px-3 py-2 text-sm text-white placeholder:text-zinc-500 transition duration-200 focus:border-amber-300 focus:outline-none;
+  background: oklch(12.5% 0.018 210 / 0.76);
+  border-color: var(--line-strong);
 }
 
 .skip-link {

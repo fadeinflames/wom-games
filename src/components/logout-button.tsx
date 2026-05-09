@@ -12,7 +12,7 @@ export function LogoutButton() {
   }
 
   return (
-    <button onClick={logout} className="btn">
+    <button onClick={logout} className="btn min-h-8 px-3 py-1.5">
       Выйти
     </button>
   );

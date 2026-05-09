@@ -1,8 +1,10 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export function CreatePackForm() {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -26,12 +28,13 @@ export function CreatePackForm() {
 
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setError(data.error ?? "Не удалось создать pack");
+        setError(data.error ?? "Не удалось создать пак");
         return;
       }
 
       const body = (await res.json()) as { id: string };
-      window.location.href = `/packs/${body.id}`;
+      router.push(`/packs/${body.id}`);
+      router.refresh();
     } catch {
       setError("Ошибка соединения");
     } finally {
@@ -40,19 +43,37 @@ export function CreatePackForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card space-y-3">
-      <h2 className="font-[var(--font-display)] text-2xl font-bold">Новый game pack</h2>
-      <input className="field" name="title" placeholder="Название pack (мин. 3 символа)" required minLength={3} />
-      <textarea
-        className="field min-h-28"
-        name="description"
-        placeholder="Описание pack (мин. 10 символов)"
-        required
-        minLength={10}
-      />
-      <label className="inline-flex items-center gap-2 text-sm text-zinc-300">
-        <input type="checkbox" name="isPublic" />
-        Публичный pack (виден в галерее)
+    <form onSubmit={handleSubmit} className="panel-strong mx-auto w-full max-w-2xl space-y-5">
+      <div>
+        <p className="kicker">New drill pack</p>
+        <h2 className="mt-2 font-[var(--font-display)] text-3xl font-bold">Новый пак сценариев</h2>
+        <p className="mt-2 text-sm text-zinc-500">
+          Назови набор так, чтобы ведущий сразу понял уровень команды и тему тренировки.
+        </p>
+      </div>
+      <div className="space-y-2">
+        <label className="muted-label block" htmlFor="title">Название</label>
+        <input id="title" className="field" name="title" placeholder="Kubernetes networking drills" required minLength={3} />
+      </div>
+      <div className="space-y-2">
+        <label className="muted-label block" htmlFor="description">Описание</label>
+        <textarea
+          id="description"
+          className="field min-h-28"
+          name="description"
+          placeholder="Коротко: какие инциденты внутри, кому подходит и как проводить."
+          required
+          minLength={10}
+        />
+      </div>
+      <label className="panel flex cursor-pointer items-start gap-3 text-sm text-zinc-300">
+        <input type="checkbox" name="isPublic" className="mt-1 accent-amber-400" />
+        <span>
+          <span className="block font-medium text-zinc-200">Опубликовать в галерее</span>
+          <span className="mt-1 block text-xs leading-relaxed text-zinc-500">
+            Публичные паки видны другим пользователям и доступны для режима игрока.
+          </span>
+        </span>
       </label>
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
       <button className="btn btn-primary" disabled={loading}>

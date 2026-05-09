@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { createSession, registerUser } from "@/lib/auth";
 import { registerSchema } from "@/lib/validation";
-import { badRequest, conflict, readJson, tooMany } from "@/lib/http";
+import { badRequest, conflict, internalError, readJson, tooMany } from "@/lib/http";
 import { clientKeyFromRequest, rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
@@ -15,10 +15,10 @@ export async function POST(req: Request) {
   }
 
   const json = await readJson(req);
-  if (!json) {
-    return badRequest();
+  if (!json.ok) {
+    return json.response;
   }
-  const parsed = registerSchema.safeParse(json);
+  const parsed = registerSchema.safeParse(json.data);
   if (!parsed.success) {
     return badRequest(parsed.error.issues[0]?.message ?? "Invalid payload");
   }
@@ -35,9 +35,6 @@ export async function POST(req: Request) {
       return conflict("User with this email or username already exists");
     }
     console.error("register failed", error);
-    return NextResponse.json(
-      { error: "Internal error" },
-      { status: 500 },
-    );
+    return internalError();
   }
 }

@@ -1,36 +1,40 @@
 import { z } from "zod";
 import { Difficulty } from "@prisma/client";
 
+const shortText = (min: number, max: number) => z.string().trim().min(min).max(max);
+const jsonObject = z.record(z.string(), z.unknown());
+const jsonObjectArray = (max = 100) => z.array(jsonObject).max(max);
+
 export const registerSchema = z.object({
-  email: z.email().min(5),
-  username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9._-]+$/),
+  email: z.string().trim().toLowerCase().email().min(5).max(254),
+  username: z.string().trim().min(3).max(32).regex(/^[a-zA-Z0-9._-]+$/).toLowerCase(),
   password: z.string().min(8).max(128),
 });
 
 export const loginSchema = z.object({
-  identity: z.string().min(3),
+  identity: z.string().trim().min(3).max(254).toLowerCase(),
   password: z.string().min(8),
 });
 
 export const packSchema = z.object({
-  title: z.string().min(3).max(120),
-  description: z.string().min(10).max(2000),
+  title: shortText(3, 120),
+  description: shortText(10, 2000),
   isPublic: z.boolean().default(false),
 });
 
 export const packUpdateSchema = packSchema.partial();
 
 export const scenarioSchema = z.object({
-  title: z.string().min(3).max(120),
-  summary: z.string().min(10).max(2000),
-  type: z.string().min(3).max(120),
+  title: shortText(3, 120),
+  summary: shortText(10, 2000),
+  type: shortText(3, 120),
   durationMin: z.number().int().min(5).max(180),
   difficulty: z.enum(Difficulty),
-  contextJson: z.record(z.string(), z.unknown()).default({}),
-  eventsJson: z.array(z.record(z.string(), z.unknown())).default([]),
-  hintsJson: z.array(z.record(z.string(), z.unknown())).default([]),
-  actionsJson: z.array(z.record(z.string(), z.unknown())).default([]),
-  gmScriptJson: z.record(z.string(), z.unknown()).nullable().optional(),
+  contextJson: jsonObject.default({}),
+  eventsJson: jsonObjectArray(200).default([]),
+  hintsJson: jsonObjectArray(100).default([]),
+  actionsJson: jsonObjectArray(200).default([]),
+  gmScriptJson: jsonObject.nullable().optional(),
 });
 
 export const createGameSessionSchema = z.object({
@@ -55,14 +59,14 @@ export const sessionEventSchema = z.object({
 });
 
 export const importPayloadSchema = z.object({
-  title: z.string().min(3).max(120),
-  summary: z.string().min(10).max(2000),
-  type: z.string().min(3).max(120),
+  title: shortText(3, 120),
+  summary: shortText(10, 2000),
+  type: shortText(3, 120),
   durationMin: z.number().int().min(5).max(180).default(20),
   difficulty: z.enum(Difficulty).default(Difficulty.MIDDLE),
-  contextJson: z.record(z.string(), z.unknown()).default({}),
-  eventsJson: z.array(z.record(z.string(), z.unknown())).default([]),
-  hintsJson: z.array(z.record(z.string(), z.unknown())).default([]),
-  actionsJson: z.array(z.record(z.string(), z.unknown())).default([]),
-  gmScriptJson: z.record(z.string(), z.unknown()).nullable().optional(),
+  contextJson: jsonObject.default({}),
+  eventsJson: jsonObjectArray(200).default([]),
+  hintsJson: jsonObjectArray(100).default([]),
+  actionsJson: jsonObjectArray(200).default([]),
+  gmScriptJson: jsonObject.nullable().optional(),
 });

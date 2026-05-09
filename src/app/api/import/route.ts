@@ -15,10 +15,10 @@ export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return unauthorized();
 
-  const json = await readJson(req);
-  if (!json) return badRequest();
+  const json = await readJson(req, { maxBytes: 1024 * 1024 });
+  if (!json.ok) return json.response;
 
-  const parsed = importSchema.safeParse(json);
+  const parsed = importSchema.safeParse(json.data);
   if (!parsed.success) {
     return badRequest("Invalid import payload");
   }
@@ -31,17 +31,17 @@ export async function POST(req: Request) {
     return notFound("Pack not found");
   }
 
-  const lastScenario = await prisma.scenario.findFirst({
-    where: { packId: pack.id },
-    orderBy: { position: "desc" },
-    select: { position: true },
-  });
-  let position = lastScenario?.position ?? 0;
+  await prisma.$transaction(async (tx) => {
+    const lastScenario = await tx.scenario.findFirst({
+      where: { packId: pack.id },
+      orderBy: { position: "desc" },
+      select: { position: true },
+    });
+    let position = lastScenario?.position ?? 0;
 
-  await prisma.$transaction(
-    parsed.data.scenarios.map((scenario) => {
+    for (const scenario of parsed.data.scenarios) {
       position += 1;
-      return prisma.scenario.create({
+      await tx.scenario.create({
         data: {
           packId: pack.id,
           title: scenario.title,
@@ -57,8 +57,8 @@ export async function POST(req: Request) {
           position,
         },
       });
-    }),
-  );
+    }
+  });
 
   return NextResponse.json({ ok: true, count: parsed.data.scenarios.length });
 }

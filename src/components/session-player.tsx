@@ -74,7 +74,7 @@ export function SessionPlayer({ code, initialStatus, initialScenarioId, scenario
           body: JSON.stringify(body),
         });
       } catch {
-        // ignore — player can keep playing even if logging fails
+        // The player can keep playing even if logging fails.
       }
     },
     [code],
@@ -105,8 +105,8 @@ export function SessionPlayer({ code, initialStatus, initialScenarioId, scenario
 
   if (status === "ended") {
     return (
-      <div className="card space-y-3 text-center">
-        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Сессия</p>
+      <div className="panel-strong space-y-3 text-center">
+        <p className="muted-label">Сессия</p>
         <h2 className="font-[var(--font-display)] text-2xl font-bold">Игра завершена</h2>
         <p className="text-sm text-zinc-400">Ведущий закрыл эту сессию.</p>
       </div>
@@ -115,8 +115,8 @@ export function SessionPlayer({ code, initialStatus, initialScenarioId, scenario
 
   if (!scenarioId) {
     return (
-      <div className="card space-y-3">
-        <p className="text-xs uppercase tracking-[0.2em] text-amber-400">Ведущий дал выбор тебе</p>
+      <div className="panel-strong space-y-4">
+        <p className="kicker">Ведущий дал выбор тебе</p>
         <p className="text-sm text-zinc-400">Выбери сценарий — ведущий увидит его и будет вести игру.</p>
         <div className="grid gap-2 md:grid-cols-2">
           {scenarios.map((s) => (
@@ -125,7 +125,7 @@ export function SessionPlayer({ code, initialStatus, initialScenarioId, scenario
               type="button"
               disabled={picking}
               onClick={() => pickScenario(s.id)}
-              className="rounded-lg border border-white/10 bg-zinc-950/60 p-3 text-left transition hover:border-amber-400/50 disabled:opacity-60"
+              className="rounded-lg border border-white/10 bg-white/[0.025] p-3 text-left transition hover:border-amber-400/50 disabled:opacity-60"
             >
               <p className="font-semibold text-zinc-100 leading-snug">{s.title}</p>
               <p className="mt-1 text-xs text-zinc-500">{s.summary}</p>

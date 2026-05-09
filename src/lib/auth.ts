@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 const COOKIE_NAME = "wom_session";
 const SESSION_DAYS = 30;
+const SESSION_MAX_AGE_SECONDS = SESSION_DAYS * 24 * 60 * 60;
 
 // Pre-computed dummy hash for timing-safe login: prevents user enumeration
 // by ensuring bcrypt.compare runs even when the user is not found.
@@ -26,7 +27,14 @@ function constantTimeEqualsHex(a: string, b: string) {
 export async function createSession(userId: string) {
   const token = randomBytes(32).toString("hex");
   const tokenHash = sha256(token);
-  const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000);
+
+  await prisma.session.deleteMany({
+    where: {
+      userId,
+      expiresAt: { lt: new Date() },
+    },
+  });
 
   await prisma.session.create({
     data: {
@@ -43,6 +51,8 @@ export async function createSession(userId: string) {
     secure: process.env.NODE_ENV === "production",
     path: "/",
     expires: expiresAt,
+    maxAge: SESSION_MAX_AGE_SECONDS,
+    priority: "high",
   });
 }
 
@@ -70,7 +80,20 @@ export async function getCurrentUser() {
   const tokenHash = sha256(token);
   const session = await prisma.session.findUnique({
     where: { tokenHash },
-    include: { user: true },
+    select: {
+      id: true,
+      tokenHash: true,
+      expiresAt: true,
+      user: {
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
+    },
   });
 
   // Mitigates token enumeration: constant-time compare (unique lookup already

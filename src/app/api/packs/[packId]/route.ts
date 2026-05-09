@@ -12,10 +12,13 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const { packId } = await ctx.params;
 
   const json = await readJson(req);
-  if (!json) return badRequest();
-  const parsed = packUpdateSchema.safeParse(json);
+  if (!json.ok) return json.response;
+  const parsed = packUpdateSchema.safeParse(json.data);
   if (!parsed.success) {
     return badRequest(parsed.error.issues[0]?.message ?? "Invalid payload");
+  }
+  if (Object.keys(parsed.data).length === 0) {
+    return badRequest("No changes provided");
   }
 
   const pack = await prisma.gamePack.findUnique({ where: { id: packId } });

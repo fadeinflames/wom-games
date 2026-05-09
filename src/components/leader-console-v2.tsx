@@ -91,7 +91,7 @@ function Section({
     cyan: "text-cyan-400",
   }[tone];
   return (
-    <details className="card group space-y-2" open={defaultOpen}>
+    <details className="panel group space-y-2" open={defaultOpen}>
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
         <span className={`text-xs uppercase tracking-[0.2em] ${toneClass}`}>
           {title}
@@ -101,7 +101,7 @@ function Section({
             </span>
           )}
         </span>
-        <span className="text-zinc-500 transition-transform group-open:rotate-90">▸</span>
+        <span className="text-zinc-500 transition-transform group-open:rotate-90">+</span>
       </summary>
       <div className="pt-2">{children}</div>
     </details>
@@ -156,10 +156,10 @@ export function LeaderConsole({
   if (!activeCode) {
     return (
       <div className="space-y-4">
-        <div className="card space-y-4">
+        <div className="panel-strong space-y-5">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">1. Выбор сценария</p>
-            <p className="mt-1 text-sm text-zinc-400">
+            <p className="kicker text-emerald-300">01. Выбор сценария</p>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
               Выбери сценарий сам или крутани колесо — игрок получит именно этот инцидент.
             </p>
           </div>
@@ -177,7 +177,7 @@ export function LeaderConsole({
                     className={`rounded-lg border p-3 text-left transition ${
                       chosenScenarioId === s.id
                         ? "border-amber-400/80 bg-amber-500/10"
-                        : "border-white/10 bg-zinc-950/60 hover:border-amber-400/40"
+                        : "border-white/10 bg-white/[0.025] hover:border-amber-400/40"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -195,7 +195,7 @@ export function LeaderConsole({
 
               <div className="flex flex-wrap gap-2">
                 <button type="button" className="btn" onClick={spinWheel}>
-                  🎡 Крутить колесо
+                  Случайный сценарий
                 </button>
                 <button
                   type="button"
@@ -221,15 +221,15 @@ export function LeaderConsole({
         </div>
 
         {recentSessions.length > 0 && (
-          <div className="card space-y-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Последние сессии</p>
+          <div className="panel-strong space-y-3">
+            <p className="muted-label">Последние сессии</p>
             <div className="space-y-2">
               {recentSessions.map((s) => (
                 <button
                   key={s.id}
                   type="button"
                   onClick={() => setActiveCode(s.code)}
-                  className="flex w-full items-center justify-between gap-3 rounded-lg border border-white/10 bg-zinc-950/60 p-3 text-left hover:border-amber-400/40"
+                  className="flex w-full items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.025] p-3 text-left transition hover:border-amber-400/40"
                 >
                   <div>
                     <p className="font-mono text-sm text-amber-300">{s.code}</p>
@@ -278,6 +278,9 @@ function ActiveSessionPanel({
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [confirmingEnd, setConfirmingEnd] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState<string | null>(null);
 
   const fetchSession = useCallback(async () => {
     try {
@@ -319,9 +322,22 @@ function ActiveSessionPanel({
   }
 
   async function endSession() {
-    if (!confirm("Завершить сессию? Игрок увидит экран окончания.")) return;
-    await fetch(`/api/sessions/${code}`, { method: "DELETE" });
-    await fetchSession();
+    setEnding(true);
+    setEndError(null);
+    try {
+      const res = await fetch(`/api/sessions/${code}`, { method: "DELETE" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setEndError(data.error ?? "Не удалось завершить сессию");
+        return;
+      }
+      setConfirmingEnd(false);
+      await fetchSession();
+    } catch {
+      setEndError("Ошибка соединения");
+    } finally {
+      setEnding(false);
+    }
   }
 
   const scenario = session?.scenario ?? null;
@@ -345,25 +361,25 @@ function ActiveSessionPanel({
 
   if (loadError && !session) {
     return (
-      <div className="card space-y-3">
+      <div className="panel-strong space-y-3">
         <p className="text-sm text-red-400">{loadError}</p>
-        <button className="btn" onClick={onLeave}>← Вернуться к выбору</button>
+        <button className="btn" onClick={onLeave}>Вернуться к выбору</button>
       </div>
     );
   }
 
   if (!session) {
-    return <div className="card text-sm text-zinc-400">Загружаем сессию…</div>;
+    return <div className="panel-strong text-sm text-zinc-400">Загружаем сессию...</div>;
   }
 
   const isEnded = session.status === "ended";
 
   return (
     <div className="space-y-4">
-      <div className="card space-y-3">
+      <div className="panel-strong space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="text-xs uppercase tracking-[0.2em] text-emerald-400">Код сессии</span>
+            <span className="kicker text-emerald-300">Код сессии</span>
             <span className="font-mono text-2xl font-bold tracking-widest text-amber-300">{code}</span>
             {isEnded && (
               <span className="rounded border border-zinc-600 px-2 py-0.5 text-xs font-mono text-zinc-500">
@@ -373,10 +389,10 @@ function ActiveSessionPanel({
           </div>
           <div className="flex gap-2">
             <button type="button" className="btn" onClick={onLeave}>
-              ← К выбору
+              К выбору
             </button>
             {!isEnded && (
-              <button type="button" className="btn" onClick={endSession}>
+              <button type="button" className="btn btn-danger" onClick={() => setConfirmingEnd(true)}>
                 Завершить сессию
               </button>
             )}
@@ -384,15 +400,15 @@ function ActiveSessionPanel({
         </div>
 
         <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">
+          <p className="kicker text-emerald-300">
             Ссылка для игрока
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <code className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap rounded bg-black/40 px-2 py-1 font-mono text-xs text-zinc-200">
+            <code className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap rounded bg-white/[0.04] px-2 py-1 font-mono text-xs text-zinc-200">
               {shareUrl}
             </code>
             <button type="button" className="btn" onClick={copyLink}>
-              {copied ? "✓ Скопировано" : "📋 Скопировать"}
+              {copied ? "Скопировано" : "Скопировать"}
             </button>
             <a
               className="btn"
@@ -400,7 +416,7 @@ function ActiveSessionPanel({
               target="_blank"
               rel="noreferrer"
             >
-              ↗ Открыть
+              Открыть
             </a>
           </div>
           <p className="mt-1 text-xs text-zinc-500">
@@ -410,8 +426,8 @@ function ActiveSessionPanel({
       </div>
 
       {!scenario && !isEnded && (
-        <div className="card space-y-2">
-          <p className="text-xs uppercase tracking-[0.2em] text-amber-400">Ждём выбора сценария</p>
+        <div className="panel-strong space-y-2">
+          <p className="kicker">Ждём выбора сценария</p>
           <p className="text-sm text-zinc-400">
             Сценарий ещё не выбран — игрок выберет его сам, или вернись назад и задай сценарий явно.
           </p>
@@ -421,9 +437,9 @@ function ActiveSessionPanel({
       {scenario && (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
           <div className="space-y-4">
-            <div className="card space-y-2">
+            <div className="panel-strong space-y-3">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs uppercase tracking-[0.2em] text-emerald-400">Активный сценарий</span>
+                <span className="kicker text-emerald-300">Активный сценарий</span>
                 <span
                   className={`rounded border px-2 py-0.5 text-xs font-mono uppercase ${difficultyColor(scenario.difficulty)}`}
                 >
@@ -437,10 +453,10 @@ function ActiveSessionPanel({
               </p>
 
               {Object.keys(context).length > 0 && (
-                <details className="group mt-3 rounded border border-white/10 bg-black/30 p-3 text-xs text-zinc-400">
+                <details className="group mt-3 rounded border border-white/10 bg-white/[0.025] p-3 text-xs text-zinc-400">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
                     <span className="uppercase tracking-widest text-zinc-500">Контекст сценария</span>
-                    <span className="text-zinc-500 transition-transform group-open:rotate-90">▸</span>
+                    <span className="text-zinc-500 transition-transform group-open:rotate-90">+</span>
                   </summary>
                   <div className="mt-2 space-y-1">
                     {Object.entries(context).map(([k, v]) => (
@@ -456,10 +472,10 @@ function ActiveSessionPanel({
               )}
             </div>
 
-            <div className="card space-y-3">
+            <div className="panel-strong space-y-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Текущее состояние</span>
+                  <span className="muted-label">Текущее состояние</span>
                   <span className="rounded border border-white/15 px-2 py-0.5 text-xs text-zinc-300">
                     ROUND {currentRound}/10
                   </span>
@@ -472,7 +488,7 @@ function ActiveSessionPanel({
               <p className="text-xs text-zinc-500">{phaseInfo.sublabel}</p>
 
               <div className="space-y-2">
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Живая лента игрока</p>
+                <p className="muted-label">Живая лента игрока</p>
                 {actionEvents.length === 0 ? (
                   <p className="text-sm text-zinc-500">
                     Ждём первое действие игрока…
@@ -480,7 +496,7 @@ function ActiveSessionPanel({
                 ) : (
                   <div className="space-y-2 max-h-[420px] overflow-y-auto">
                     {[...actionEvents].reverse().map((e) => (
-                      <div key={e.id} className="rounded-lg border border-white/10 bg-black/40 p-3">
+                      <div key={e.id} className="rounded-lg border border-white/10 bg-white/[0.025] p-3">
                         <div className="flex items-center justify-between gap-2 text-xs text-zinc-500">
                           <span suppressHydrationWarning>
                             R{e.round} · {e.phase} · {formatTime(e.createdAt)}
@@ -504,8 +520,8 @@ function ActiveSessionPanel({
           </div>
 
           <aside className="space-y-4">
-            <div className="card space-y-2">
-              <p className="text-xs uppercase tracking-[0.2em] text-amber-400">🎯 Шпаргалка ведущего</p>
+            <div className="panel-strong space-y-2">
+              <p className="kicker">Шпаргалка ведущего</p>
               <p className="text-xs text-zinc-500">
                 Что подсказывать игроку по ходу фазы {phaseInfo.label}.
               </p>
@@ -515,7 +531,7 @@ function ActiveSessionPanel({
               <Section title="Подсказки" count={hints.length} defaultOpen>
                 <div className="space-y-2">
                   {hints.map((h, i) => (
-                    <div key={i} className="rounded border border-white/10 bg-black/30 p-2 text-xs">
+                    <div key={i} className="rounded border border-white/10 bg-white/[0.025] p-2 text-xs">
                       {h.when && (
                         <p className="font-semibold text-amber-300">Если: {h.when}</p>
                       )}
@@ -549,7 +565,7 @@ function ActiveSessionPanel({
               >
                 <div className="space-y-1 text-xs">
                   {asArray<GmBeat>(gmScript.beats).map((b, i) => (
-                    <div key={i} className="rounded border border-white/10 bg-black/30 p-2">
+                    <div key={i} className="rounded border border-white/10 bg-white/[0.025] p-2">
                       <p className="text-zinc-500 font-mono text-[10px]">R{b.at ?? "?"}</p>
                       <p className="text-zinc-300 leading-snug">{b.tip}</p>
                     </div>
@@ -566,7 +582,7 @@ function ActiveSessionPanel({
               >
                 <div className="space-y-1 text-xs">
                   {asArray<GmPressure>(gmScript.pressure).map((p, i) => (
-                    <div key={i} className="rounded border border-white/10 bg-black/30 p-2">
+                    <div key={i} className="rounded border border-white/10 bg-white/[0.025] p-2">
                       <p className="text-zinc-500 font-mono text-[10px]">
                         R{p.at ?? "?"}{p.who ? ` · ${p.who}` : ""}
                       </p>
@@ -589,7 +605,7 @@ function ActiveSessionPanel({
                       <p className="leading-snug">{c.step}</p>
                       {Array.isArray(c.triggers) && c.triggers.length > 0 && (
                         <p className="text-[10px] font-mono text-zinc-500 mt-0.5">
-                          → {c.triggers.join(", ")}
+                          triggers: {c.triggers.join(", ")}
                         </p>
                       )}
                     </li>
@@ -618,7 +634,7 @@ function ActiveSessionPanel({
               <Section title="Таймлайн инцидента" count={scenarioEvents.length}>
                 <div className="space-y-1 text-xs">
                   {scenarioEvents.map((e, i) => (
-                    <div key={i} className="rounded border border-white/10 bg-black/30 p-2">
+                    <div key={i} className="rounded border border-white/10 bg-white/[0.025] p-2">
                       <p className="text-zinc-500 font-mono">
                         T+{e.t ?? "?"}м {e.type ? `· ${e.type}` : ""}
                       </p>
@@ -634,7 +650,7 @@ function ActiveSessionPanel({
               <Section title="Правильные действия" count={scenarioActions.length}>
                 <div className="space-y-1 text-xs">
                   {scenarioActions.map((a, i) => (
-                    <div key={i} className="rounded border border-white/10 bg-black/30 p-2">
+                    <div key={i} className="rounded border border-white/10 bg-white/[0.025] p-2">
                       <p className="font-semibold text-zinc-200">
                         {a.cat && <span className="text-zinc-500 mr-1 uppercase">[{a.cat}]</span>}
                         {a.label}
@@ -651,12 +667,50 @@ function ActiveSessionPanel({
               </Section>
             )}
 
-            <div className="card">
+            <div className="panel">
               <Link className="text-xs text-zinc-400 hover:text-zinc-200" href={`/packs/${packId}`}>
-                К настройкам pack →
+                К настройкам пака
               </Link>
             </div>
           </aside>
+        </div>
+      )}
+
+      {confirmingEnd && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-zinc-950/75 px-4 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="end-session-title"
+            className="panel-strong w-full max-w-md space-y-4 border-red-500/30"
+          >
+            <div className="space-y-2">
+              <p className="kicker text-red-300">Завершение</p>
+              <h2 id="end-session-title" className="font-[var(--font-display)] text-xl font-bold">
+                Завершить сессию {code}?
+              </h2>
+              <p className="text-sm leading-relaxed text-zinc-400">
+                Игрок увидит экран окончания, а новые события больше не будут приниматься.
+              </p>
+            </div>
+            {endError && <p className="text-sm text-red-300">{endError}</p>}
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="btn"
+                disabled={ending}
+                onClick={() => {
+                  setConfirmingEnd(false);
+                  setEndError(null);
+                }}
+              >
+                Отмена
+              </button>
+              <button type="button" className="btn btn-danger" disabled={ending} onClick={endSession}>
+                {ending ? "Завершаем..." : "Завершить"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

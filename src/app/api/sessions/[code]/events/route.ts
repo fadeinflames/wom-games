@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sessionEventSchema } from "@/lib/validation";
-import { badRequest, notFound, readJson } from "@/lib/http";
+import { badRequest, notFound, readJson, tooMany } from "@/lib/http";
+import { clientKeyFromRequest, rateLimit } from "@/lib/rate-limit";
 import { isValidSessionCode } from "@/lib/session-codes";
 
 type Ctx = { params: Promise<{ code: string }> };
@@ -10,11 +11,20 @@ export async function POST(req: Request, ctx: Ctx) {
   const { code } = await ctx.params;
   if (!isValidSessionCode(code)) return notFound("Session not found");
 
+  const gate = rateLimit(clientKeyFromRequest(req, `session-events:${code}`), {
+    limit: 120,
+    windowMs: 60_000,
+  });
+  if (!gate.ok) return tooMany(gate.retryAfterMs);
+
   const json = await readJson(req);
-  if (!json) return badRequest();
-  const parsed = sessionEventSchema.safeParse(json);
+  if (!json.ok) return json.response;
+  const parsed = sessionEventSchema.safeParse(json.data);
   if (!parsed.success) {
     return badRequest(parsed.error.issues[0]?.message ?? "Invalid payload");
+  }
+  if (parsed.data.kind === "start") {
+    return badRequest("Start events are created by the server");
   }
 
   const session = await prisma.gameSession.findUnique({

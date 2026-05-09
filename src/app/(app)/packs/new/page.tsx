@@ -3,5 +3,9 @@ import { CreatePackForm } from "@/components/create-pack-form";
 
 export default async function NewPackPage() {
   await requireUser();
-  return <CreatePackForm />;
+  return (
+    <div className="py-6">
+      <CreatePackForm />
+    </div>
+  );
 }

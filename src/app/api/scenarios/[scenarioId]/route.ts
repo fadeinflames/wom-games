@@ -19,6 +19,15 @@ export async function DELETE(_req: Request, ctx: Ctx) {
     return notFound("Scenario not found");
   }
 
-  await prisma.scenario.delete({ where: { id: scenario.id } });
+  await prisma.$transaction([
+    prisma.scenario.delete({ where: { id: scenario.id } }),
+    prisma.scenario.updateMany({
+      where: {
+        packId: scenario.packId,
+        position: { gt: scenario.position },
+      },
+      data: { position: { decrement: 1 } },
+    }),
+  ]);
   return NextResponse.json({ ok: true });
 }

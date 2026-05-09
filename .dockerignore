@@ -5,3 +5,4 @@ coverage
 .env*
 .git
 .DS_Store
+graphify-out

@@ -71,7 +71,7 @@ function RichText({ text, compact = false }: { text: string; compact?: boolean }
           return (
             <pre
               key={index}
-              className="overflow-x-auto rounded-md border border-emerald-500/20 bg-black/55 p-3 font-mono text-xs leading-relaxed text-emerald-100 whitespace-pre-wrap"
+              className="overflow-x-auto rounded-md border border-emerald-500/20 bg-white/[0.035] p-3 font-mono text-xs leading-relaxed text-emerald-100 whitespace-pre-wrap"
             >
               <code>{part.value}</code>
             </pre>
@@ -176,7 +176,7 @@ export function PlayerBoard({
     setScore(newScore);
     setPanic(newPanic);
     setHistory((prev) =>
-      [`T+${elapsedMin}м [${incidentPhase.label}] → ${choice.title}`, ...prev].slice(0, 12),
+      [`T+${elapsedMin}м [${incidentPhase.label}] -> ${choice.title}`, ...prev].slice(0, 12),
     );
     onEvent?.({
       kind: "action",
@@ -223,7 +223,7 @@ export function PlayerBoard({
 
   if (!scenario && !showScenarioPicker) {
     return (
-      <div className="rounded-xl border border-white/10 bg-black/55 p-8 text-center space-y-3">
+      <div className="panel-strong p-8 text-center space-y-3">
         <p className="text-xs uppercase tracking-[0.2em] text-amber-400">
           {scenarioUnavailable ? "Сценарий недоступен" : "Ждём ведущего"}
         </p>
@@ -238,7 +238,7 @@ export function PlayerBoard({
 
   if (scenarioIdx === null && showScenarioPicker) {
     return (
-      <div className="rounded-xl border border-white/10 bg-black/55 p-6 space-y-5">
+      <div className="panel-strong p-6 space-y-5">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Выбери инцидент</p>
           <p className="mt-1 text-sm text-zinc-400">Один сценарий — 10 раундов расследования от Detection до Recovery.</p>
@@ -281,7 +281,7 @@ export function PlayerBoard({
     const rank =
       score >= 150 ? "MASTER SRE" : score >= 100 ? "INCIDENT COMMANDER" : "ON-CALL ENGINEER";
     return (
-      <div className="rounded-xl border border-amber-500/30 bg-black/60 p-8 text-center space-y-6">
+      <div className="panel-strong border-amber-500/30 p-8 text-center space-y-6">
         <p className="text-xs uppercase tracking-[0.2em] text-amber-400">Инцидент закрыт</p>
         <h2 className="font-[var(--font-display)] text-5xl font-black text-white">{rank}</h2>
         <div className="flex justify-center gap-8 text-sm">
@@ -314,7 +314,7 @@ export function PlayerBoard({
   }
 
   return (
-    <div className="rounded-xl border border-white/10 bg-black/55">
+    <div className="overflow-hidden rounded-xl border border-white/10 bg-[oklch(13%_0.018_210_/_0.72)] shadow-[0_24px_90px_rgba(0,0,0,0.3)]">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between border-b border-white/10 px-4 py-3 gap-2">
         <div className="flex items-center gap-3 flex-wrap">
@@ -330,14 +330,14 @@ export function PlayerBoard({
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-zinc-400">Score: {score}</span>
-          <button type="button" className="btn" onClick={resetGame}>↺ Reset</button>
+          <button type="button" className="btn" onClick={resetGame}>Reset</button>
           <button
             type="button"
             className="btn btn-primary"
             onClick={nextRound}
             disabled={!locked}
           >
-            {round >= MAX_ROUNDS ? "Завершить инцидент" : "Следующий шаг →"}
+            {round >= MAX_ROUNDS ? "Завершить инцидент" : "Следующий шаг"}
           </button>
         </div>
       </div>
@@ -361,7 +361,7 @@ export function PlayerBoard({
                 {Object.keys(context).length > 0 && (
                   <div className="mt-4 grid gap-2 text-xs text-zinc-400 sm:grid-cols-2">
                     {Object.entries(context).slice(0, 6).map(([key, value]) => (
-                      <div key={key} className="rounded-lg border border-white/10 bg-black/30 p-2">
+                      <div key={key} className="rounded-lg border border-white/10 bg-white/[0.025] p-2">
                         <p className="uppercase tracking-widest text-zinc-600">{key}</p>
                         <p className="mt-1 text-zinc-300">
                           {Array.isArray(value) ? value.join(", ") : String(value)}
@@ -450,21 +450,21 @@ export function PlayerBoard({
           <div className="rounded-xl border border-white/10 bg-zinc-950/80 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Service health</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+              <div className="rounded-lg border border-white/10 bg-white/[0.025] p-3">
                 <p className="text-xs text-zinc-500">Availability</p>
                 <p className="text-2xl font-bold text-emerald-400">{health.toFixed(1)}%</p>
               </div>
-              <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+              <div className="rounded-lg border border-white/10 bg-white/[0.025] p-3">
                 <p className="text-xs text-zinc-500">Error rate</p>
                 <p className="text-2xl font-bold text-amber-300">{errorRate}%</p>
               </div>
-              <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+              <div className="rounded-lg border border-white/10 bg-white/[0.025] p-3">
                 <p className="text-xs text-zinc-500">Orders/min</p>
                 <p className="text-2xl font-bold text-sky-300">
                   {Math.max(90, Math.round(390 - panic * 2.3))}
                 </p>
               </div>
-              <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+              <div className="rounded-lg border border-white/10 bg-white/[0.025] p-3">
                 <p className="text-xs text-zinc-500">P99</p>
                 <p className="text-2xl font-bold text-red-300">{p99}ms</p>
               </div>
@@ -489,7 +489,7 @@ export function PlayerBoard({
                 </div>
               ))}
               {history.map((item, i) => (
-                <div key={i} className="rounded border border-white/10 bg-black/30 p-2 text-xs text-zinc-300">
+                <div key={i} className="rounded border border-white/10 bg-white/[0.025] p-2 text-xs text-zinc-300">
                   {item}
                 </div>
               ))}

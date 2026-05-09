@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Mode = "login" | "register";
 
 export function AuthForm({ mode }: { mode: Mode }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -35,24 +37,33 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { error?: string };
-      setError(body.error ?? "Request failed");
+      setError(body.error ?? "Не удалось выполнить запрос. Проверь данные и попробуй ещё раз.");
       setBusy(false);
       return;
     }
 
     setSuccess(true);
-    window.location.href = "/dashboard";
+    router.push("/dashboard");
+    router.refresh();
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card mx-auto w-full max-w-md space-y-4">
-      <h1 className="font-[var(--font-display)] text-3xl font-bold">
-        {mode === "login" ? "Вход" : "Регистрация"}
-      </h1>
+    <form onSubmit={handleSubmit} className="panel-strong mx-auto w-full max-w-md space-y-5">
+      <div>
+        <p className="kicker">{mode === "login" ? "Session access" : "New operator"}</p>
+        <h1 className="mt-2 font-[var(--font-display)] text-3xl font-bold">
+          {mode === "login" ? "Вход в тренировочную" : "Регистрация"}
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-zinc-500">
+          {mode === "login"
+            ? "Используй свой аккаунт или demo@wom.local / demo1234 для быстрой проверки."
+            : "Аккаунт нужен, чтобы создавать паки, запускать сессии и публиковать сценарии."}
+        </p>
+      </div>
 
       {mode === "login" ? (
-        <div className="space-y-1">
-          <label htmlFor="identity" className="text-xs text-zinc-400 uppercase tracking-widest">
+        <div className="space-y-2">
+          <label htmlFor="identity" className="muted-label block">
             Email или username
           </label>
           <input
@@ -66,8 +77,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
         </div>
       ) : (
         <>
-          <div className="space-y-1">
-            <label htmlFor="email" className="text-xs text-zinc-400 uppercase tracking-widest">
+          <div className="space-y-2">
+            <label htmlFor="email" className="muted-label block">
               Email
             </label>
             <input
@@ -80,8 +91,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
               required
             />
           </div>
-          <div className="space-y-1">
-            <label htmlFor="username" className="text-xs text-zinc-400 uppercase tracking-widest">
+          <div className="space-y-2">
+            <label htmlFor="username" className="muted-label block">
               Username
             </label>
             <input
@@ -96,13 +107,13 @@ export function AuthForm({ mode }: { mode: Mode }) {
               title="Только буквы, цифры, точки, дефисы и подчёркивания"
               required
             />
-            <p className="text-xs text-zinc-500">3–32 символа. Только a-z, 0-9, . - _</p>
+            <p className="text-xs text-zinc-500">3-32 символа. Только a-z, 0-9, . - _</p>
           </div>
         </>
       )}
 
-      <div className="space-y-1">
-        <label htmlFor="password" className="text-xs text-zinc-400 uppercase tracking-widest">
+      <div className="space-y-2">
+        <label htmlFor="password" className="muted-label block">
           Пароль
         </label>
         <input
@@ -122,8 +133,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
       {success ? (
-        <p className="text-sm text-emerald-400">
-          {mode === "register" ? "Аккаунт создан. Переходим..." : "Вход выполнен. Переходим..."}
+        <p className="text-sm text-emerald-300" aria-live="polite">
+          {mode === "register" ? "Аккаунт создан. Открываем игры." : "Вход выполнен. Открываем игры."}
         </p>
       ) : null}
 

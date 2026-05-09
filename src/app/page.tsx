@@ -1,51 +1,45 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 
-const HOW_TO_PLAY = [
+const INCIDENT_STEPS = [
   {
     step: "01",
-    title: "Зарегистрируйся или войди",
-    body: "Создай аккаунт — email + пароль. Никакого OAuth, никаких внешних зависимостей. Или войди под demo / demo1234, чтобы попробовать сразу.",
-    tag: "AUTH",
+    title: "Собери пак",
+    body: "Добавь сценарии вручную или импортируй JSON из заметок, runbook и разбора реального инцидента.",
+    tag: "setup",
   },
   {
     step: "02",
-    title: "Открой или создай game pack",
-    body: 'Перейди в галерею — там уже есть публичный Starter Pack. Или создай свой pack в "Мои игры" и наполни его сценариями вручную или через JSON-импорт.',
-    tag: "SETUP",
+    title: "Запусти сессию",
+    body: "Ведущий выбирает кейс или отдаёт выбор игроку, получает код и ссылку для команды.",
+    tag: "gm",
   },
   {
     step: "03",
-    title: "Режим ведущего: выбери кейсы",
-    body: "В Leader Console отметь, какие сценарии участвуют в сегодняшней сессии. Можно оставить все или выбрать под уровень команды.",
-    tag: "GM",
+    title: "Веди расследование",
+    body: "Игрок проходит 10 раундов, выбирает действия, а ведущий видит ленту, подсказки и чекпоинты.",
+    tag: "play",
   },
   {
     step: "04",
-    title: "Крути колесо — получай инцидент",
-    body: "Нажми «Крутить колесо 🎰» — колесо случайно выбирает сценарий. Команда видит название и summary инцидента. Таймер пошёл.",
-    tag: "SPIN",
+    title: "Разбери решение",
+    body: "Score, panic, health и action log превращают тренировку в конкретный debrief, а не разговор по памяти.",
+    tag: "review",
   },
-  {
-    step: "05",
-    title: "Выбирай действия и снижай панику",
-    body: "Каждый раунд — 4 варианта действий (DBG / COM / OPS / IC). Выбор влияет на Panic level, Service Health и Score. Игра — 10 раундов.",
-    tag: "PLAY",
-  },
-  {
-    step: "06",
-    title: "Режим игрока: соло-тренировка",
-    body: "Для самостоятельной отработки. Сценарии идут по очереди, panic растёт с каждым раундом. В конце — ранг: On-call / IC / Master SRE.",
-    tag: "SOLO",
-  },
+] as const;
+
+const SAMPLE_EVENTS = [
+  ["T+00", "Alertmanager", "5xx вырос до 18.4%"],
+  ["T+05", "Ingress", "часть трафика получает 503"],
+  ["T+12", "Rollback", "ошибки падают, p99 ещё высокий"],
 ] as const;
 
 const IMPORT_SCHEMA = `{
   "scenarios": [
     {
-      "title": "Потерянные в DNS",
-      "summary": "Сервис не резолвит внутренние имена.",
-      "type": "DNS, CoreDNS",
+      "title": "Слепой DNS",
+      "summary": "Сервис периодически не резолвит внутренние имена.",
+      "type": "DNS, CoreDNS, NetworkPolicy",
       "difficulty": "MIDDLE",
       "durationMin": 20,
       "contextJson": { "infra": "Kubernetes 1.34" },
@@ -57,211 +51,200 @@ const IMPORT_SCHEMA = `{
   ]
 }`;
 
+function IncidentPreview() {
+  return (
+    <div className="panel-strong relative overflow-hidden p-0">
+      <div className="border-b border-white/10 px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="muted-label">Live drill</p>
+            <h2 className="mt-1 font-[var(--font-display)] text-2xl font-bold">Слепой DNS</h2>
+          </div>
+          <span className="status-pill border-amber-400/40 text-amber-300">ROUND 04</span>
+        </div>
+      </div>
+
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_230px]">
+        <div className="space-y-4 p-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              ["panic", "42", "amber"],
+              ["health", "71.6%", "emerald"],
+              ["p99", "486ms", "cyan"],
+            ].map(([label, value, tone]) => (
+              <div key={label} className="border-t border-white/10 pt-3">
+                <p className="muted-label">{label}</p>
+                <p
+                  className={`mt-1 font-mono text-2xl font-bold ${
+                    tone === "amber"
+                      ? "text-amber-300"
+                      : tone === "emerald"
+                      ? "text-emerald-300"
+                      : "text-cyan-300"
+                  }`}
+                >
+                  {value}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="panel space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="kicker text-emerald-300">Action window</p>
+              <span className="font-mono text-xs text-zinc-500">Detection</span>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {["Проверить CoreDNS logs", "Сравнить NetworkPolicy", "Объявить статус", "Откатить ingress rule"].map(
+                (action, index) => (
+                  <div
+                    key={action}
+                    className={`rounded-md border px-3 py-2 text-sm ${
+                      index === 1
+                        ? "border-amber-400/50 bg-amber-400/10 text-amber-100"
+                        : "border-white/10 bg-white/[0.025] text-zinc-300"
+                    }`}
+                  >
+                    {action}
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
+        </div>
+
+        <aside className="border-t border-white/10 p-4 lg:border-l lg:border-t-0">
+          <p className="muted-label">Incident feed</p>
+          <div className="mt-3 space-y-3">
+            {SAMPLE_EVENTS.map(([time, source, body]) => (
+              <div key={time} className="border-l border-white/10 pl-3">
+                <p className="font-mono text-[11px] text-amber-300">{time}</p>
+                <p className="mt-1 text-sm font-semibold text-zinc-200">{source}</p>
+                <p className="text-xs leading-relaxed text-zinc-500">{body}</p>
+              </div>
+            ))}
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
 export default async function HomePage() {
   const user = await getCurrentUser();
 
   return (
-    <div className="space-y-10">
-      {/* Hero */}
-      <section className="card space-y-4">
-        <p className="text-xs uppercase tracking-[0.2em] text-amber-400">Open-source SRE game platform</p>
-        <h1 className="font-[var(--font-display)] text-4xl font-bold md:text-5xl">
-          Incident training,<br className="hidden md:block" /> теперь как настоящая игра.
-        </h1>
-        <p className="max-w-2xl text-zinc-300">
-          Wheel of Misfortune — колесо случайно выбирает инцидент, команда разбирает его в реальном времени.
-          Тренируй навыки on-call, управление инцидентами и координацию в SRE-стиле.
-        </p>
-        <div className="flex flex-wrap gap-3">
-          {user ? (
-            <>
-              <Link href="/dashboard" className="btn btn-primary">Мои игры →</Link>
-              <Link href="/gallery" className="btn">Галерея паков</Link>
-            </>
-          ) : (
-            <>
-              <Link href="/register" className="btn btn-primary">Зарегистрироваться</Link>
-              <Link href="/login" className="btn">Войти</Link>
-              <Link href="/gallery" className="btn">Галерея паков</Link>
-            </>
-          )}
+    <div className="space-y-14">
+      <section className="grid min-h-[calc(100dvh-9rem)] items-center gap-8 py-6 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="max-w-2xl">
+          <p className="kicker">Open-source SRE training room</p>
+          <h1 className="mt-5 font-[var(--font-display)] text-4xl font-black leading-[1.02] md:text-6xl">
+            Инциденты, которые можно проиграть до настоящей ночной смены.
+          </h1>
+          <p className="mt-5 max-w-[64ch] text-lg leading-relaxed text-zinc-300">
+            Wheel of Misfortune превращает incident review в живую тренировку: ведущий запускает кейс,
+            игрок выбирает действия, а система ведёт panic, service health и историю решений.
+          </p>
+
+          <div className="mt-7 flex flex-wrap gap-3">
+            {user ? (
+              <>
+                <Link href="/dashboard" className="btn btn-primary">Открыть мои игры</Link>
+                <Link href="/gallery" className="btn">Взять публичный пак</Link>
+              </>
+            ) : (
+              <>
+                <Link href="/register" className="btn btn-primary">Начать тренировку</Link>
+                <Link href="/login" className="btn">Войти demo</Link>
+                <Link href="/gallery" className="btn">Галерея</Link>
+              </>
+            )}
+          </div>
+
+          <dl className="mt-8 grid max-w-xl grid-cols-3 gap-4 border-t border-white/10 pt-5">
+            {[
+              ["10", "раундов"],
+              ["4", "типа действий"],
+              ["2", "режима игры"],
+            ].map(([value, label]) => (
+              <div key={label}>
+                <dt className="font-mono text-2xl font-bold text-zinc-100">{value}</dt>
+                <dd className="mt-1 text-xs uppercase tracking-[0.14em] text-zinc-500">{label}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
+
+        <IncidentPreview />
       </section>
 
-      {/* How to play */}
-      <section className="space-y-4">
+      <section className="space-y-5">
         <div className="flex items-center gap-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-amber-400">Как играть</p>
-          <div className="flex-1 border-t border-white/10" />
+          <p className="kicker">Workflow</p>
+          <div className="h-px flex-1 bg-white/10" />
         </div>
-
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {HOW_TO_PLAY.map(({ step, title, body, tag }) => (
-            <article key={step} className="card space-y-3 group hover:border-white/20 transition-colors">
-              <div className="flex items-center justify-between">
-                <span className="font-[var(--font-display)] text-3xl font-black text-white/10 group-hover:text-amber-500/30 transition-colors">
-                  {step}
-                </span>
-                <span className="rounded border border-white/15 px-2 py-0.5 text-xs text-zinc-500 font-mono">
-                  {tag}
-                </span>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {INCIDENT_STEPS.map(({ step, title, body, tag }) => (
+            <article key={step} className="border-t border-white/10 pt-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-mono text-sm text-amber-300">{step}</span>
+                <span className="status-pill text-zinc-500">{tag}</span>
               </div>
-              <h2 className="font-[var(--font-display)] text-lg font-bold leading-snug">{title}</h2>
-              <p className="text-sm text-zinc-400 leading-relaxed">{body}</p>
+              <h2 className="mt-4 font-[var(--font-display)] text-xl font-bold">{title}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{body}</p>
             </article>
           ))}
         </div>
       </section>
 
-      {/* Import scenarios */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-amber-400">Загрузка сценариев</p>
-          <div className="flex-1 border-t border-white/10" />
+      <section className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
+        <div className="panel-strong space-y-4">
+          <p className="kicker text-emerald-300">Scenario intake</p>
+          <h2 className="font-[var(--font-display)] text-3xl font-bold">Импорт без ручной рутины</h2>
+          <p className="max-w-[62ch] text-sm leading-relaxed text-zinc-400">
+            В репозитории есть skill для преобразования incident notes в JSON. Он помогает собрать
+            контекст, таймлайн, подсказки ведущего и варианты действий, а затем загрузить всё в пак.
+          </p>
+          <ol className="space-y-2 text-sm text-zinc-300">
+            {[
+              "Опиши инцидент или вставь runbook.",
+              "Попроси агента собрать JSON для WOM.",
+              "Импортируй сценарии на странице пака.",
+            ].map((item, index) => (
+              <li key={item} className="flex gap-3">
+                <span className="font-mono text-amber-300">{String(index + 1).padStart(2, "0")}</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ol>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="space-y-4">
-            {/* Agent skill */}
-            <div className="card space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-mono text-emerald-400 mb-1">agent-skill/wom-incident-to-json/SKILL.md</p>
-                  <h2 className="font-[var(--font-display)] text-xl font-bold">Agent skill для Claude</h2>
-                </div>
-                <span className="rounded border border-emerald-500/30 px-2 py-0.5 text-xs text-emerald-400 font-mono shrink-0">AI</span>
-              </div>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                В репозитории есть готовый агентный скилл для Claude Code.
-                Он конвертирует описание любого реального инцидента, runbook или заметки
-                в валидный JSON для импорта — автоматически заполняет все поля по контексту.
-              </p>
-              <div className="space-y-2">
-                <p className="text-xs text-zinc-500 uppercase tracking-widest">Как использовать</p>
-                <ol className="space-y-1.5 text-sm text-zinc-400">
-                  <li className="flex gap-2">
-                    <span className="text-amber-500 shrink-0">1.</span>
-                    <span>Установи <a href="https://claude.ai/code" target="_blank" rel="noopener" className="text-amber-400 hover:underline">Claude Code</a> в своём репозитории</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-amber-500 shrink-0">2.</span>
-                    <span>Скопируй <code className="rounded bg-white/10 px-1 text-xs font-mono">agent-skill/wom-incident-to-json/SKILL.md</code> в свой проект</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-amber-500 shrink-0">3.</span>
-                    <span>Скажи агенту: <em className="text-zinc-300">«Сделай JSON для импорта в WOM»</em> и опиши инцидент</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-amber-500 shrink-0">4.</span>
-                    <span>Вставь результат в форму импорта на странице pack</span>
-                  </li>
-                </ol>
-              </div>
+        <div className="panel-strong space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-mono text-xs text-cyan-300">POST /api/import</p>
+              <h2 className="mt-1 font-[var(--font-display)] text-2xl font-bold">Минимальный формат</h2>
             </div>
-
-            {/* Agent skill spoiler */}
-            <details className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 group">
-              <summary className="flex cursor-pointer items-center justify-between gap-3 p-4 text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors">
-                <span className="flex items-center gap-2">
-                  <span className="font-mono text-xs">📄</span>
-                  Полный текст SKILL.md — скопируй в свой репозиторий
-                </span>
-                <span className="text-zinc-500 group-open:rotate-180 transition-transform text-xs">▾</span>
-              </summary>
-              <pre className="overflow-x-auto border-t border-emerald-500/20 p-4 text-xs text-zinc-300 font-mono leading-relaxed whitespace-pre-wrap">{`# WOM Incident To JSON
-
-Convert incident descriptions, markdown runbooks, and rough notes into import-ready JSON for WOM Platform.
-
-## Output Contract
-
-- Always output **valid JSON**.
-- Root object must match \`schemas/wom.scenario.v1.json\`.
-- Use uppercase enum for difficulty: \`JUNIOR\`, \`MIDDLE\`, \`SENIOR\`.
-- Keep \`durationMin\` realistic: \`15-30\` for typical training rounds.
-
-## Prompt Template For Agent
-
-When the user says: "Сделай JSON для импорта в WOM", produce:
-
-1. \`scenarios[]\` with one object per incident.
-2. Fill:
-   - \`title\`: short incident name
-   - \`summary\`: one-sentence game framing
-   - \`type\`: stack area, e.g. \`DNS, NetworkPolicy\`
-   - \`difficulty\`: inferred from blast radius and ambiguity
-   - \`durationMin\`: expected game length
-   - \`contextJson\`: infra/services/setup/time
-   - \`eventsJson\`: timeline-style events with \`t\`, \`type\`, \`title\`, \`body\`
-   - \`hintsJson\`: coaching hints
-   - \`actionsJson\`: candidate player actions
-   - \`gmScriptJson\`: optional pressure/checkpoints/beats
-
-## Example
-
-\`\`\`json
-{
-  "scenarios": [
-    {
-      "title": "Потерянные в DNS",
-      "summary": "Сервис периодически не резолвит внутренние имена.",
-      "type": "DNS, CoreDNS",
-      "difficulty": "MIDDLE",
-      "durationMin": 20,
-      "contextJson": {
-        "infra": "Kubernetes 1.34",
-        "services": ["frontend", "backend", "coredns"],
-        "setup": "После сетевого hardening появились интервальные timeout.",
-        "time": "Четверг, 11:00"
-      },
-      "eventsJson": [],
-      "hintsJson": [],
-      "actionsJson": [],
-      "gmScriptJson": null
-    }
-  ]
-}
-\`\`\``}</pre>
-            </details>
+            <span className="status-pill border-cyan-400/30 text-cyan-300">JSON</span>
           </div>
-
-          {/* JSON import format */}
-          <div className="card space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-mono text-sky-400 mb-1">POST /api/import</p>
-                <h2 className="font-[var(--font-display)] text-xl font-bold">JSON-импорт вручную</h2>
-              </div>
-              <span className="rounded border border-sky-500/30 px-2 py-0.5 text-xs text-sky-400 font-mono shrink-0">JSON</span>
-            </div>
-            <p className="text-sm text-zinc-400 leading-relaxed">
-              Открой нужный pack → форма <strong className="text-zinc-200">«Импорт JSON»</strong> внизу страницы.
-              Вставь объект с массивом <code className="rounded bg-white/10 px-1 text-xs font-mono">scenarios</code> — все сценарии добавятся сразу.
-              Можно импортировать до 100 сценариев за раз.
-            </p>
-            <div className="space-y-2">
-              <p className="text-xs text-zinc-500 uppercase tracking-widest">Минимальный формат</p>
-              <pre className="overflow-x-auto rounded-lg bg-black/50 border border-white/10 p-3 text-xs text-zinc-300 font-mono leading-relaxed">
-                {IMPORT_SCHEMA}
-              </pre>
-              <p className="text-xs text-zinc-500">
-                Обязательные поля: <code className="text-zinc-400">title</code>, <code className="text-zinc-400">summary</code>, <code className="text-zinc-400">type</code>, <code className="text-zinc-400">difficulty</code>, <code className="text-zinc-400">durationMin</code>.{" "}
-                Полная схема — <code className="text-zinc-400">schemas/wom.scenario.v1.json</code> в репозитории.
-              </p>
-            </div>
-          </div>
+          <pre className="code-panel whitespace-pre-wrap">{IMPORT_SCHEMA}</pre>
+          <p className="text-xs leading-relaxed text-zinc-500">
+            Полная схема лежит в <code className="rounded bg-white/10 px-1 font-mono text-zinc-300">schemas/wom.scenario.v1.json</code>.
+          </p>
         </div>
       </section>
 
-      {/* Quick tip */}
-      <section className="card border-amber-500/20 bg-amber-500/5 space-y-2">
-        <p className="text-xs uppercase tracking-[0.2em] text-amber-400">Быстрый старт</p>
-        <p className="text-sm text-zinc-300">
-          Хочешь попробовать прямо сейчас?{" "}
-          <Link href="/login" className="text-amber-400 hover:underline">Войди</Link>{" "}
-          под <code className="rounded bg-white/10 px-1.5 py-0.5 text-xs font-mono">demo / demo1234</code>,
-          открой <strong>Starter Pack</strong> в галерее и переключись в{" "}
-          <strong>Режим ведущего</strong>. Первый инцидент — через 30 секунд.
-        </p>
+      <section className="panel-strong flex flex-wrap items-center justify-between gap-4 border-amber-400/20 bg-amber-400/[0.045]">
+        <div>
+          <p className="kicker">Быстрый старт</p>
+          <p className="mt-2 text-sm text-zinc-300">
+            Для проверки войди под <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-xs">demo / demo1234</code>,
+            открой Starter Pack и запусти режим ведущего.
+          </p>
+        </div>
+        <Link href={user ? "/dashboard" : "/login"} className="btn btn-primary">
+          {user ? "Перейти к играм" : "Открыть вход"}
+        </Link>
       </section>
     </div>
   );

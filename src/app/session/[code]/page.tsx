@@ -50,13 +50,13 @@ export default async function SessionPage({ params }: Props) {
   if (session.status === "ended") {
     return (
       <div className="mx-auto max-w-2xl p-6">
-        <div className="card space-y-3 text-center">
-          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Сессия</p>
+        <div className="panel-strong space-y-3 text-center">
+          <p className="muted-label">Сессия</p>
           <h1 className="font-[var(--font-display)] text-3xl font-bold">Игра завершена</h1>
           <p className="text-sm text-zinc-400">
             Ведущий закрыл эту сессию. Попроси новую ссылку, если хочешь сыграть ещё.
           </p>
-          <Link className="btn btn-primary mx-auto w-fit" href="/">← На главную</Link>
+          <Link className="btn btn-primary mx-auto w-fit" href="/">На главную</Link>
         </div>
       </div>
     );
@@ -64,10 +64,10 @@ export default async function SessionPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4">
-      <div className="card space-y-1">
+      <div className="panel-strong space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Session</p>
+            <p className="kicker text-emerald-300">Session</p>
             <h1 className="font-[var(--font-display)] text-2xl font-bold">{session.pack.title}</h1>
           </div>
           <span className="font-mono text-sm text-amber-300">#{session.code}</span>

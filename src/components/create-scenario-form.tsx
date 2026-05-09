@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const CONTEXT_HINT = JSON.stringify(
@@ -23,8 +24,8 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1">
-      <span className="block text-xs font-medium uppercase tracking-widest text-zinc-500">{label}</span>
+    <div className="space-y-2">
+      <span className="muted-label block">{label}</span>
       {children}
       {hint && <span className="block text-xs text-zinc-600 leading-relaxed">{hint}</span>}
     </div>
@@ -32,6 +33,7 @@ function Field({
 }
 
 export function CreateScenarioForm({ packId }: { packId: string }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -77,7 +79,7 @@ export function CreateScenarioForm({ packId }: { packId: string }) {
       }
       setOk(true);
       (e.target as HTMLFormElement).reset();
-      setTimeout(() => window.location.reload(), 800);
+      router.refresh();
     } catch {
       setError("Ошибка соединения");
     } finally {
@@ -86,10 +88,11 @@ export function CreateScenarioForm({ packId }: { packId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card space-y-4">
+    <form onSubmit={handleSubmit} className="panel-strong space-y-5">
       <div>
-        <h3 className="font-[var(--font-display)] text-xl font-bold">Добавить сценарий</h3>
-        <p className="mt-0.5 text-xs text-zinc-500">Вручную — или используй JSON-импорт справа для массовой загрузки.</p>
+        <p className="kicker">Manual scenario</p>
+        <h3 className="mt-2 font-[var(--font-display)] text-2xl font-bold">Добавить сценарий</h3>
+        <p className="mt-1 text-xs leading-relaxed text-zinc-500">Подходит для точечного кейса. Для пачки сценариев используй JSON-импорт рядом.</p>
       </div>
 
       <Field label="Название">

@@ -11,11 +11,11 @@ export async function POST(req: Request) {
   if (!user) return unauthorized();
 
   const json = await readJson(req);
-  if (!json) return badRequest();
+  if (!json.ok) return json.response;
 
   const parsed = scenarioSchema
     .extend({ packId: z.string().min(10) })
-    .safeParse(json);
+    .safeParse(json.data);
   if (!parsed.success) {
     return badRequest(parsed.error.issues[0]?.message ?? "Invalid payload");
   }
@@ -28,27 +28,29 @@ export async function POST(req: Request) {
     return notFound("Pack not found");
   }
 
-  const lastScenario = await prisma.scenario.findFirst({
-    where: { packId: pack.id },
-    orderBy: { position: "desc" },
-    select: { position: true },
-  });
+  const scenario = await prisma.$transaction(async (tx) => {
+    const lastScenario = await tx.scenario.findFirst({
+      where: { packId: pack.id },
+      orderBy: { position: "desc" },
+      select: { position: true },
+    });
 
-  const scenario = await prisma.scenario.create({
-    data: {
-      packId: pack.id,
-      title: parsed.data.title,
-      summary: parsed.data.summary,
-      type: parsed.data.type,
-      difficulty: parsed.data.difficulty,
-      durationMin: parsed.data.durationMin,
-      contextJson: parsed.data.contextJson as Prisma.InputJsonValue,
-      eventsJson: parsed.data.eventsJson as Prisma.InputJsonValue,
-      hintsJson: parsed.data.hintsJson as Prisma.InputJsonValue,
-      actionsJson: parsed.data.actionsJson as Prisma.InputJsonValue,
-      gmScriptJson: parsed.data.gmScriptJson as Prisma.InputJsonValue,
-      position: (lastScenario?.position ?? 0) + 1,
-    },
+    return tx.scenario.create({
+      data: {
+        packId: pack.id,
+        title: parsed.data.title,
+        summary: parsed.data.summary,
+        type: parsed.data.type,
+        difficulty: parsed.data.difficulty,
+        durationMin: parsed.data.durationMin,
+        contextJson: parsed.data.contextJson as Prisma.InputJsonValue,
+        eventsJson: parsed.data.eventsJson as Prisma.InputJsonValue,
+        hintsJson: parsed.data.hintsJson as Prisma.InputJsonValue,
+        actionsJson: parsed.data.actionsJson as Prisma.InputJsonValue,
+        gmScriptJson: parsed.data.gmScriptJson as Prisma.InputJsonValue,
+        position: (lastScenario?.position ?? 0) + 1,
+      },
+    });
   });
 
   return NextResponse.json({ id: scenario.id });

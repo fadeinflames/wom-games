@@ -14,10 +14,10 @@ export async function POST(req: Request) {
   }
 
   const json = await readJson(req);
-  if (!json) {
-    return badRequest();
+  if (!json.ok) {
+    return json.response;
   }
-  const parsed = loginSchema.safeParse(json);
+  const parsed = loginSchema.safeParse(json.data);
   if (!parsed.success) {
     return badRequest(parsed.error.issues[0]?.message ?? "Invalid payload");
   }

@@ -7,6 +7,7 @@ type Bucket = {
 };
 
 const buckets = new Map<string, Bucket>();
+let nextPruneAt = 0;
 
 export type RateLimitResult = {
   ok: boolean;
@@ -19,6 +20,11 @@ export function rateLimit(
   opts: { limit: number; windowMs: number },
 ): RateLimitResult {
   const now = Date.now();
+  if (now >= nextPruneAt) {
+    pruneExpiredBuckets(now);
+    nextPruneAt = now + Math.min(opts.windowMs, 60_000);
+  }
+
   const bucket = buckets.get(key);
 
   if (!bucket || bucket.resetAt <= now) {
@@ -34,8 +40,20 @@ export function rateLimit(
   return { ok: true, remaining: bucket.tokens, retryAfterMs: 0 };
 }
 
+function pruneExpiredBuckets(now: number) {
+  for (const [key, bucket] of buckets) {
+    if (bucket.resetAt <= now) {
+      buckets.delete(key);
+    }
+  }
+}
+
 export function clientKeyFromRequest(req: Request, prefix: string) {
   const xff = req.headers.get("x-forwarded-for");
-  const ip = xff?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+  const ip =
+    req.headers.get("cf-connecting-ip") ||
+    xff?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
   return `${prefix}:${ip}`;
 }

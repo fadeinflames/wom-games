@@ -55,21 +55,21 @@ export default async function RunPackPage({ params }: Props) {
   });
 
   return (
-    <div className="space-y-4">
-      <div className="card space-y-2">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
+    <div className="space-y-5">
+      <section className="border-b border-white/10 pb-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Leader Console</p>
-            <h1 className="font-[var(--font-display)] text-3xl font-bold">{pack.title}</h1>
+            <p className="kicker text-emerald-300">Leader console</p>
+            <h1 className="mt-2 font-[var(--font-display)] text-4xl font-black">{pack.title}</h1>
+            <p className="mt-2 max-w-[64ch] text-sm leading-relaxed text-zinc-400">
+              Выбери сценарий, отдай игроку ссылку и веди игру по подсказкам.
+            </p>
           </div>
           <Link className="btn" href={`/packs/${pack.id}`}>
-            ← К паку
+            К паку
           </Link>
         </div>
-        <p className="text-sm text-zinc-400">
-          Режим ведущего: выбери сценарий, отдай игроку ссылку и веди игру по подсказкам.
-        </p>
-      </div>
+      </section>
 
       <LeaderConsole
         packId={pack.id}

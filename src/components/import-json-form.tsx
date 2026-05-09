@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const PLACEHOLDER = `{
@@ -20,6 +21,7 @@ const PLACEHOLDER = `{
 }`;
 
 export function ImportJsonForm({ packId }: { packId: string }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -62,8 +64,10 @@ export function ImportJsonForm({ packId }: { packId: string }) {
         return;
       }
       const n = data.count ?? "?";
-      setOk(`Импортировано сценариев: ${n}. Страница обновляется...`);
-      setTimeout(() => window.location.reload(), 1200);
+      setOk(`Импортировано сценариев: ${n}. Обновляем список.`);
+      setValue("");
+      setJsonValid(null);
+      router.refresh();
     } catch {
       setError("Ошибка соединения. Попробуй ещё раз.");
     } finally {
@@ -79,19 +83,20 @@ export function ImportJsonForm({ packId }: { packId: string }) {
       : "";
 
   return (
-    <form onSubmit={handleSubmit} className="card space-y-3">
+    <form onSubmit={handleSubmit} className="panel-strong space-y-4">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h3 className="font-[var(--font-display)] text-xl font-bold">Импорт JSON</h3>
-          <p className="mt-0.5 text-xs text-zinc-500">
+          <p className="kicker text-cyan-300">Bulk import</p>
+          <h3 className="mt-2 font-[var(--font-display)] text-2xl font-bold">Импорт JSON</h3>
+          <p className="mt-1 text-xs text-zinc-500">
             POST /api/import · поле <code className="rounded bg-white/10 px-1">scenarios: []</code>
           </p>
         </div>
         {jsonValid === true && (
-          <span className="shrink-0 rounded border border-emerald-500/30 px-2 py-0.5 text-xs text-emerald-400 font-mono">JSON OK</span>
+          <span className="status-pill shrink-0 border-emerald-500/30 text-emerald-400">JSON OK</span>
         )}
         {jsonValid === false && (
-          <span className="shrink-0 rounded border border-red-500/30 px-2 py-0.5 text-xs text-red-400 font-mono">JSON ERR</span>
+          <span className="status-pill shrink-0 border-red-500/30 text-red-400">JSON ERR</span>
         )}
       </div>
 
@@ -134,7 +139,7 @@ export function ImportJsonForm({ packId }: { packId: string }) {
 
       <details className="text-xs text-zinc-500">
         <summary className="cursor-pointer hover:text-zinc-300 transition-colors">Минимальный формат JSON</summary>
-        <pre className="mt-2 overflow-x-auto rounded-lg bg-black/50 border border-white/10 p-3 text-zinc-400 leading-relaxed">{PLACEHOLDER}</pre>
+        <pre className="code-panel mt-2 whitespace-pre-wrap text-zinc-400">{PLACEHOLDER}</pre>
       </details>
     </form>
   );
